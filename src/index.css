@@ -1,0 +1,177 @@
+@import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-primary-50: #ecfeff;
+  --color-primary-100: #cffafe;
+  --color-primary-200: #a5f3fc;
+  --color-primary-300: #67e8f9;
+  --color-primary-400: #22d3ee;
+  --color-primary-500: #06b6d4;
+  --color-primary-600: #0891b2;
+  --color-primary-700: #0e7490;
+  --color-primary-800: #155e75;
+  --color-primary-900: #164e63;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+:root {
+  color-scheme: light;
+}
+
+body {
+  font-family: 'Manrope', 'Segoe UI', Tahoma, sans-serif;
+  color: #0f172a;
+  background-color: #f1f5f9;
+  min-height: 100vh;
+  position: relative;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(1200px 500px at 5% -10%, rgba(16, 185, 129, 0.18), transparent 60%),
+    radial-gradient(900px 500px at 90% 0%, rgba(14, 116, 144, 0.18), transparent 60%),
+    linear-gradient(180deg, #f8fafc 0%, #eef2f7 55%, #e9eef3 100%);
+}
+
+@layer base {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  .font-display {
+    font-family: 'Space Grotesk', 'Segoe UI', sans-serif;
+    letter-spacing: -0.02em;
+  }
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl border border-white/70 bg-white/80 backdrop-blur shadow-[0_10px_30px_rgba(15,23,42,0.08)];
+  }
+
+  .card-solid {
+    @apply rounded-2xl border border-slate-200 bg-white shadow-sm;
+  }
+
+  .page-title {
+    @apply text-2xl sm:text-3xl font-semibold text-slate-900;
+  }
+
+  .page-subtitle {
+    @apply text-sm sm:text-base text-slate-500;
+  }
+
+  .input {
+    @apply w-full rounded-xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm text-slate-700 shadow-sm outline-none transition focus:border-primary-500 focus:ring-2 focus:ring-primary-300/40;
+  }
+
+  .btn-primary {
+    @apply rounded-xl bg-primary-600 px-4 py-2.5 text-sm font-semibold text-white shadow-md shadow-primary-600/20 transition hover:bg-primary-700;
+  }
+
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-xs font-medium text-slate-600;
+  }
+}
+
+@layer utilities {
+  .animate-rise {
+    animation: rise 520ms ease-out both;
+  }
+
+  .animate-fade {
+    animation: fade 420ms ease-out both;
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #e2e8f0;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #94a3b8;
+  border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #64748b;
+}
+
+/* Layout fallbacks in case Tailwind utilities fail to load */
+.app-shell {
+  padding-left: 0;
+  transition: padding 300ms ease;
+}
+
+.app-shell.is-open {
+  padding-left: 18rem;
+}
+
+@media (min-width: 1024px) {
+  .app-shell {
+    padding-left: 18rem;
+  }
+}
+
+.app-main {
+  padding: 16px;
+}
+
+@media (min-width: 1024px) {
+  .app-main {
+    padding: 24px;
+  }
+}
+
+.page-content {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.page-content > * + * {
+  margin-top: 24px;
+}
+
+@media (min-width: 1280px) {
+  .page-content {
+    max-width: 1280px;
+  }
+}
