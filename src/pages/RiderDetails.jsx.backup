@@ -1,0 +1,794 @@
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import {
+  ArrowLeft, Truck, Mail, Phone, MapPin, Calendar,
+  CheckCircle, XCircle, Wallet, TrendingUp, ArrowDownToLine,
+  ShieldCheck, ShieldX, ShieldAlert, AlertCircle, Star, User, Package,
+} from 'lucide-react';
+import { adminAPI } from '../services/api';
+
+function currency(value) {
+  return Number(value || 0).toLocaleString();
+}
+
+const VERIFY_META = {
+  verified: { label: 'Verified', bg: '#e0f2fe', color: '#0369a1', icon: ShieldCheck },
+  approved: { label: 'Approved', bg: '#e0f2fe', color: '#0369a1', icon: ShieldCheck },
+  pending: { label: 'Pending', bg: '#fef9ec', color: '#b45309', icon: ShieldAlert },
+  rejected: { label: 'Rejected', bg: '#fff1f2', color: '#be123c', icon: ShieldX },
+};
+
+export default function RiderDetails() {
+  const { riderId } = useParams();
+  const [details, setDetails] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+
+  const assetBase = useMemo(() => {
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    const base = apiUrl.replace(/\/api\/v1\/?$/, '');
+    return base || '';
+  }, []);
+
+  const toAssetUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    return assetBase ? `${assetBase}${cleanUrl}` : cleanUrl;
+  };
+
+  const fetchDetails = async () => {
+    try {
+      setLoading(true);
+      setError('');
+      console.log('Fetching rider details for ID:', riderId);
+      const response = await adminAPI.getRiderDetails(riderId);
+      console.log('Rider details response:', response.data);
+      setDetails(response.data?.data || null);
+    } catch (err) {
+      console.error('Error fetching rider details:', err);
+      setError(err.response?.data?.message || 'Failed to load rider details');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (riderId) {
+      fetchDetails();
+    }
+  }, [riderId]);
+
+  const renderStars = (rating) => {
+    const val = parseFloat(rating) || 0;
+    return (
+      <div className="rid-rating">
+        <div className="rid-stars">
+          {[1, 2, 3, 4, 5].map(n => (
+            <Star
+              key={n}
+              size={14}
+              fill={n <= Math.round(val) ? '#f59e0b' : 'none'}
+              color={n <= Math.round(val) ? '#f59e0b' : '#ddd'}
+            />
+          ))}
+        </div>
+        <span className="rid-rating-num">{val ? val.toFixed(1) : '0.0'}</span>
+      </div>
+    );
+  };
+
+  if (loading) return (
+    <>
+      <style>{styles}</style>
+      <div className="rid-state-wrap">
+        <div className="rid-spinner" />
+        <p>Loading rider details...</p>
+      </div>
+    </>
+  );
+
+  if (error) return (
+    <>
+      <style>{styles}</style>
+      <div className="rid-root">
+        <Link to="/riders" className="rid-back">
+          <ArrowLeft size={15} /> Back to Riders
+        </Link>
+        <div className="rid-error">
+          <AlertCircle size={16} />
+          {error}
+        </div>
+      </div>
+    </>
+  );
+
+  if (!details) return (
+    <>
+      <style>{styles}</style>
+      <div className="rid-root">
+        <Link to="/riders" className="rid-back">
+          <ArrowLeft size={15} /> Back to Riders
+        </Link>
+        <div className="rid-error">
+          <AlertCircle size={16} />
+          No rider data found
+        </div>
+      </div>
+    </>
+  );
+
+  const profile = details?.profile || {};
+  const rider = details?.rider || {};
+  const wallet = details?.wallet || {};
+  const verification = details?.verification || null;
+  const recentDeliveries = details?.recentDeliveries || [];
+  const vMeta = VERIFY_META[verification?.status] || VERIFY_META.pending;
+  const VIcon = vMeta.icon;
+
+  const docs = verification ? [
+    { label: 'Ghana Card Front', url: verification.ghana_card_front_url },
+    { label: 'Ghana Card Back', url: verification.ghana_card_back_url },
+    { label: 'Selfie', url: verification.selfie_url },
+  ] : [];
+
+  return (
+    <>
+      <style>{styles}</style>
+
+      <div className="rid-root">
+
+        {/* Back + header */}
+        <div>
+          <Link to="/riders" className="rid-back">
+            <ArrowLeft size={15} /> Back to Riders
+          </Link>
+          <div className="rid-page-header">
+            <div className="rid-page-icon">
+              <Truck size={24} color="#7dd3fc" />
+            </div>
+            <div>
+              <h1 className="rid-title">{profile.name || 'Rider Details'}</h1>
+              <p className="rid-sub">Profile, deliveries, wallet and verification data</p>
+            </div>
+            {rider.is_available && (
+              <span className="rid-header-badge rid-badge-available">
+                <CheckCircle size={14} /> Available
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* Stats cards */}
+        <div className="rid-grid-4">
+          {[
+            { label: 'Total Deliveries', value: rider.total_deliveries || 0, icon: Package, accent: '#0369a1', bg: '#e0f2fe' },
+            { label: 'Rating', value: renderStars(rider.rating), icon: Star, accent: '#f59e0b', bg: '#fffbeb', isRating: true },
+            { label: 'Vehicle Type', value: rider.vehicle_type || 'Not set', icon: Truck, accent: '#7c3aed', bg: '#f5f3ff' },
+            { label: 'Status', value: rider.is_available ? 'Available' : 'Offline', icon: rider.is_available ? CheckCircle : XCircle, accent: rider.is_available ? '#22c55e' : '#9ca3af', bg: rider.is_available ? '#f0fdf4' : '#f9fafb' },
+          ].map(c => {
+            const Icon = c.icon;
+            return (
+              <div className="rid-stat-card" key={c.label}>
+                <div className="rid-stat-icon" style={{ background: c.bg }}>
+                  <Icon size={16} color={c.accent} />
+                </div>
+                <div>
+                  <p className="rid-stat-label">{c.label}</p>
+                  {c.isRating ? c.value : (
+                    <p className="rid-stat-value" style={{ color: c.accent }}>{c.value}</p>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Wallet cards */}
+        <div className="rid-grid-3">
+          {[
+            { label: 'Wallet Balance', value: `$${currency(wallet.balance)}`, icon: Wallet, accent: '#0369a1', bg: '#e0f2fe' },
+            { label: 'Total Earned', value: `$${currency(wallet.total_earned)}`, icon: TrendingUp, accent: '#22c55e', bg: '#f0fdf4' },
+            { label: 'Total Withdrawn', value: `$${currency(wallet.total_withdrawn)}`, icon: ArrowDownToLine, accent: '#7c3aed', bg: '#f5f3ff' },
+          ].map(c => {
+            const Icon = c.icon;
+            return (
+              <div className="rid-wallet-card" key={c.label}>
+                <div className="rid-wallet-icon" style={{ background: c.bg }}>
+                  <Icon size={18} color={c.accent} />
+                </div>
+                <div>
+                  <p className="rid-wallet-label">{c.label}</p>
+                  <p className="rid-wallet-value" style={{ color: c.accent }}>{c.value}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Profile + Vehicle Info */}
+        <div className="rid-grid-2">
+
+          {/* Rider profile */}
+          <section className="rid-card">
+            <div className="rid-section-head">
+              <div className="rid-section-icon" style={{ background: '#e0f2fe' }}>
+                <User size={15} color="#0369a1" />
+              </div>
+              <h2 className="rid-section-title">Rider Profile</h2>
+            </div>
+
+            {/* Profile Image */}
+            <div className="rid-profile-img-wrap">
+              {profile.profile_image ? (
+                <img
+                  src={toAssetUrl(profile.profile_image)}
+                  alt={profile.name}
+                  className="rid-profile-img"
+                  onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                />
+              ) : null}
+              <div className="rid-profile-img-placeholder" style={{ display: profile.profile_image ? 'none' : 'flex' }}>
+                <User size={32} color="#c4bfb5" />
+              </div>
+            </div>
+
+            <div className="rid-rows">
+              <div className="rid-row">
+                <Mail size={14} color="#c4bfb5" />
+                <span className="rid-row-label">Email</span>
+                <span className="rid-row-val">{profile.email || '—'}</span>
+              </div>
+              <div className="rid-row">
+                <Phone size={14} color="#c4bfb5" />
+                <span className="rid-row-label">Phone</span>
+                <span className="rid-row-val">{profile.phone || '—'}</span>
+              </div>
+              <div className="rid-row">
+                <MapPin size={14} color="#c4bfb5" />
+                <span className="rid-row-label">Address</span>
+                <span className="rid-row-val">{profile.address || '—'}</span>
+              </div>
+              <div className="rid-row">
+                <Calendar size={14} color="#c4bfb5" />
+                <span className="rid-row-label">Joined</span>
+                <span className="rid-row-val">
+                  {profile.created_at
+                    ? new Date(profile.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                    : '—'}
+                </span>
+              </div>
+            </div>
+          </section>
+
+          {/* Vehicle details */}
+          <section className="rid-card">
+            <div className="rid-section-head">
+              <div className="rid-section-icon" style={{ background: '#f5f3ff' }}>
+                <Truck size={15} color="#7c3aed" />
+              </div>
+              <h2 className="rid-section-title">Vehicle Details</h2>
+            </div>
+
+            <div className="rid-rows">
+              <div className="rid-row">
+                <Truck size={14} color="#c4bfb5" />
+                <span className="rid-row-label">Vehicle Type</span>
+                <span className="rid-row-val">
+                  <span className="rid-vehicle-pill">{rider.vehicle_type || 'Not specified'}</span>
+                </span>
+              </div>
+              <div className="rid-row">
+                <span style={{ width: 14 }} />
+                <span className="rid-row-label">License Plate</span>
+                <span className="rid-row-val">{rider.license_plate || '—'}</span>
+              </div>
+              <div className="rid-row">
+                <span style={{ width: 14 }} />
+                <span className="rid-row-label">Availability</span>
+                <span className={`rid-pill ${rider.is_available ? 'rid-pill-green' : 'rid-pill-grey'}`}>
+                  {rider.is_available
+                    ? <><CheckCircle size={11} /> Available</>
+                    : <><XCircle size={11} /> Offline</>}
+                </span>
+              </div>
+              <div className="rid-row">
+                <Star size={14} color="#c4bfb5" />
+                <span className="rid-row-label">Rating</span>
+                <span className="rid-row-val">{renderStars(rider.rating)}</span>
+              </div>
+              <div className="rid-row">
+                <Package size={14} color="#c4bfb5" />
+                <span className="rid-row-label">Total Deliveries</span>
+                <span className="rid-row-val">
+                  <span className="rid-deliveries-badge">{rider.total_deliveries || 0} trips</span>
+                </span>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        {/* Recent Deliveries */}
+        {recentDeliveries.length > 0 && (
+          <section className="rid-card">
+            <div className="rid-section-head">
+              <div className="rid-section-icon" style={{ background: '#fef9ec' }}>
+                <Package size={15} color="#b45309" />
+              </div>
+              <h2 className="rid-section-title">Recent Deliveries</h2>
+            </div>
+
+            <div className="rid-deliveries-table-wrap">
+              <table className="rid-deliveries-table">
+                <thead>
+                  <tr>
+                    <th>Order</th>
+                    <th>Farm</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {recentDeliveries.map((d, i) => (
+                    <tr key={d.id || i}>
+                      <td>
+                        <span className="rid-order-num">#{d.order_number}</span>
+                      </td>
+                      <td>{d.farm_name || '—'}</td>
+                      <td>${currency(d.total_amount)}</td>
+                      <td>
+                        <span className={`rid-delivery-status rid-status-${(d.delivery_status || 'pending').toLowerCase()}`}>
+                          {d.delivery_status || 'Pending'}
+                        </span>
+                      </td>
+                      <td>
+                        {d.created_at
+                          ? new Date(d.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                          : '—'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        )}
+
+        {/* Verification */}
+        <section className="rid-card">
+          <div className="rid-section-head">
+            <div className="rid-section-icon" style={{ background: vMeta.bg }}>
+              <VIcon size={15} color={vMeta.color} />
+            </div>
+            <h2 className="rid-section-title">Verification Details</h2>
+            {verification && (
+              <span className="rid-verify-badge" style={{ background: vMeta.bg, color: vMeta.color }}>
+                {vMeta.label}
+              </span>
+            )}
+          </div>
+
+          {!verification || !verification.status ? (
+            <p className="rid-empty-note">No verification documents submitted yet.</p>
+          ) : (
+            <>
+              <div className="rid-grid-3" style={{ marginBottom: 20 }}>
+                {[
+                  { label: 'Status', value: verification.status || 'pending' },
+                  { label: 'Submitted', value: verification.submitted_at ? new Date(verification.submitted_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—' },
+                  { label: 'Verified At', value: verification.verified_at ? new Date(verification.verified_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '—' },
+                ].map(item => (
+                  <div key={item.label} className="rid-info-tile">
+                    <p className="rid-info-label">{item.label}</p>
+                    <p className="rid-info-value">{item.value}</p>
+                  </div>
+                ))}
+              </div>
+
+              {verification.rejection_reason && (
+                <div className="rid-rejection">
+                  <AlertCircle size={15} />
+                  <span><strong>Rejection reason:</strong> {verification.rejection_reason}</span>
+                </div>
+              )}
+
+              <div className="rid-docs-grid">
+                {docs.map(doc => {
+                  const docUrl = toAssetUrl(doc.url);
+                  return (
+                    <div key={doc.label} className="rid-doc-card">
+                      <p className="rid-doc-label">{doc.label}</p>
+                      {docUrl ? (
+                        <a href={docUrl} target="_blank" rel="noreferrer" className="rid-doc-img-wrap">
+                          <img src={docUrl} alt={doc.label} className="rid-doc-img" />
+                          <div className="rid-doc-overlay">View full</div>
+                        </a>
+                      ) : (
+                        <div className="rid-doc-empty">Not uploaded</div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+        </section>
+
+      </div>
+    </>
+  );
+}
+
+const styles = `
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,600&family=DM+Sans:wght@300;400;500&display=swap');
+
+.rid-root {
+  font-family: 'DM Sans', sans-serif;
+  padding: 32px 28px;
+  max-width: 1100px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-height: 100vh;
+  background: #f5f2ec;
+}
+
+.rid-state-wrap {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 14px; height: 320px;
+  font-family: 'DM Sans', sans-serif;
+  color: #bbb; font-size: 14px;
+  background: #f5f2ec;
+}
+.rid-spinner {
+  width: 40px; height: 40px;
+  border: 3px solid #e8e4dc;
+  border-top-color: #0369a1;
+  border-radius: 50%;
+  animation: ridspin 0.7s linear infinite;
+}
+@keyframes ridspin { to { transform: rotate(360deg); } }
+
+.rid-error {
+  display: flex; align-items: center; gap: 10px;
+  background: #fff5f5; border: 1px solid #fecdd3;
+  border-radius: 14px; padding: 16px 20px;
+  color: #be123c; font-size: 14px;
+}
+
+/* back link */
+.rid-back {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 13px; font-weight: 500;
+  color: #888; text-decoration: none;
+  margin-bottom: 16px;
+  transition: color 0.15s;
+}
+.rid-back:hover { color: #0369a1; }
+
+/* page header */
+.rid-page-header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.rid-page-icon {
+  width: 52px; height: 52px;
+  background: #0c2340;
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 6px 20px rgba(12,35,64,0.28);
+}
+.rid-title {
+  font-family: 'Fraunces', serif;
+  font-size: 26px; font-weight: 600;
+  color: #1a2e1a; margin: 0 0 3px;
+}
+.rid-sub { font-size: 13.5px; color: #999; margin: 0; }
+.rid-header-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 14px;
+  border-radius: 99px;
+  margin-left: auto;
+}
+.rid-badge-available {
+  background: #f0fdf4;
+  color: #22c55e;
+}
+
+/* grids */
+.rid-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+@media (min-width: 768px) { .rid-grid-4 { grid-template-columns: repeat(4, 1fr); } }
+
+.rid-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 16px;
+}
+@media (min-width: 640px) { .rid-grid-3 { grid-template-columns: repeat(3, 1fr); } }
+
+.rid-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+@media (min-width: 1024px) { .rid-grid-2 { grid-template-columns: 1fr 1fr; } }
+
+/* stat cards */
+.rid-stat-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+  display: flex; align-items: center; gap: 12px;
+}
+.rid-stat-icon {
+  width: 38px; height: 38px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.rid-stat-label { font-size: 11.5px; color: #999; margin: 0 0 3px; }
+.rid-stat-value {
+  font-family: 'Fraunces', serif;
+  font-size: 18px; font-weight: 600; margin: 0; line-height: 1;
+}
+
+/* wallet cards */
+.rid-wallet-card {
+  background: #fff;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.05);
+  display: flex; align-items: center; gap: 14px;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.rid-wallet-card:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.09); }
+.rid-wallet-icon {
+  width: 44px; height: 44px;
+  border-radius: 13px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.rid-wallet-label { font-size: 12.5px; color: #999; margin: 0 0 4px; }
+.rid-wallet-value {
+  font-family: 'Fraunces', serif;
+  font-size: 24px; font-weight: 600; margin: 0; line-height: 1;
+}
+
+/* card */
+.rid-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 20px rgba(0,0,0,0.06);
+}
+
+/* section head */
+.rid-section-head {
+  display: flex; align-items: center; gap: 10px;
+  margin-bottom: 20px;
+}
+.rid-section-icon {
+  width: 32px; height: 32px;
+  border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.rid-section-title {
+  font-family: 'Fraunces', serif;
+  font-size: 16px; font-weight: 600;
+  color: #1a2e1a; margin: 0; flex: 1;
+}
+
+/* rows */
+.rid-rows { display: flex; flex-direction: column; gap: 0; }
+.rid-row {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 11px 0;
+  border-bottom: 1px solid #f7f5f1;
+  font-size: 13.5px;
+}
+.rid-row:last-child { border-bottom: none; }
+.rid-row-label { color: #aaa; min-width: 120px; flex-shrink: 0; }
+.rid-row-val {
+  color: #333; font-weight: 500;
+  display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+}
+
+/* vehicle pill */
+.rid-vehicle-pill {
+  display: inline-block;
+  background: #f5f3ff;
+  color: #7c3aed;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+  padding: 4px 10px;
+  border-radius: 7px;
+}
+
+/* deliveries badge */
+.rid-deliveries-badge {
+  display: inline-flex;
+  align-items: center;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 8px;
+}
+
+/* rating */
+.rid-rating { display: flex; align-items: center; gap: 6px; }
+.rid-stars { display: flex; gap: 2px; }
+.rid-rating-num { font-size: 14px; font-weight: 600; color: #444; }
+
+/* pill */
+.rid-pill {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 4px 10px; border-radius: 99px;
+  font-size: 12px; font-weight: 500;
+}
+.rid-pill-green { background: #f0fdf4; color: #22c55e; }
+.rid-pill-grey { background: #f5f2ec; color: #999; }
+
+/* profile image */
+.rid-profile-img-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.rid-profile-img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #e0f2fe;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.rid-profile-img-placeholder {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: #f5f2ec;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #e8e4dc;
+}
+
+/* deliveries table */
+.rid-deliveries-table-wrap {
+  overflow-x: auto;
+}
+.rid-deliveries-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.rid-deliveries-table th,
+.rid-deliveries-table td {
+  padding: 12px 16px;
+  text-align: left;
+  border-bottom: 1px solid #f0ede6;
+}
+.rid-deliveries-table th {
+  font-size: 11.5px;
+  font-weight: 500;
+  color: #999;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: #faf9f6;
+}
+.rid-deliveries-table td {
+  font-size: 13.5px;
+  color: #555;
+}
+.rid-order-num {
+  font-weight: 600;
+  color: #0369a1;
+}
+.rid-delivery-status {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+.rid-status-delivered { background: #f0fdf4; color: #22c55e; }
+.rid-status-pending { background: #fef9ec; color: #b45309; }
+.rid-status-picked_up { background: #e0f2fe; color: #0369a1; }
+.rid-status-assigned { background: #f5f3ff; color: #7c3aed; }
+.rid-status-cancelled { background: #fef2f2; color: #dc2626; }
+
+/* verify badge */
+.rid-verify-badge {
+  font-size: 12px; font-weight: 600;
+  padding: 4px 12px; border-radius: 99px;
+  text-transform: capitalize;
+}
+
+/* info tiles */
+.rid-info-tile {
+  background: #faf9f6;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.rid-info-label { font-size: 12px; color: #aaa; margin: 0 0 5px; }
+.rid-info-value {
+  font-size: 14px; font-weight: 600;
+  color: #222; margin: 0; text-transform: capitalize;
+}
+
+/* rejection */
+.rid-rejection {
+  display: flex; align-items: flex-start; gap: 10px;
+  background: #fff5f5; border: 1px solid #fecdd3;
+  border-radius: 12px; padding: 12px 16px;
+  color: #be123c; font-size: 13.5px;
+  margin-bottom: 20px;
+}
+
+/* docs */
+.rid-docs-grid {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  gap: 16px;
+}
+@media (min-width: 640px) { .rid-docs-grid { grid-template-columns: repeat(3, 1fr); } }
+
+.rid-doc-card {
+  border-radius: 14px;
+  border: 1.5px solid #f0ede6;
+  overflow: hidden;
+  background: #faf9f6;
+}
+.rid-doc-label {
+  font-size: 12.5px; font-weight: 600;
+  color: #555;
+  padding: 10px 14px;
+  border-bottom: 1px solid #f0ede6;
+}
+.rid-doc-img-wrap {
+  display: block;
+  position: relative;
+  overflow: hidden;
+}
+.rid-doc-img {
+  width: 100%; height: 180px;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.3s;
+}
+.rid-doc-img-wrap:hover .rid-doc-img { transform: scale(1.04); }
+.rid-doc-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(12,35,64,0);
+  color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; font-weight: 600;
+  opacity: 0;
+  transition: background 0.2s, opacity 0.2s;
+}
+.rid-doc-img-wrap:hover .rid-doc-overlay {
+  background: rgba(12,35,64,0.45);
+  opacity: 1;
+}
+.rid-doc-empty {
+  height: 180px;
+  display: flex; align-items: center; justify-content: center;
+  color: #c4bfb5; font-size: 13px;
+}
+
+.rid-empty-note { font-size: 13.5px; color: #bbb; padding: 8px 0; margin: 0; }
+`;

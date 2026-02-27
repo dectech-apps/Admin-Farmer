@@ -3,13 +3,14 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Users, Truck, ShoppingCart,
-  BarChart3, LogOut, Menu, X, Leaf, UtensilsCrossed, CreditCard, Shield,
+  BarChart3, LogOut, Menu, X, Leaf, UtensilsCrossed, CreditCard, Shield, Package,
 } from 'lucide-react';
 
 const navItems = [
   { path: '/',            label: 'Dashboard',   icon: LayoutDashboard, permission: 'dashboard' },
   { path: '/farmers',     label: 'Farmers',     icon: Leaf,            permission: 'farmers' },
   { path: '/restaurants', label: 'Restaurants', icon: UtensilsCrossed, permission: 'restaurants' },
+  { path: '/products',    label: 'Products',    icon: Package,         permission: 'products' },
   { path: '/riders',      label: 'Riders',      icon: Truck,           permission: 'riders' },
   { path: '/customers',   label: 'Customers',   icon: Users,           permission: 'customers' },
   { path: '/orders',      label: 'Orders',      icon: ShoppingCart,    permission: 'orders' },

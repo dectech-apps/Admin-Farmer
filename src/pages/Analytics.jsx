@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { adminAPI } from '../services/api';
 import { DollarSign, TrendingUp, Leaf, ShoppingCart, UtensilsCrossed } from 'lucide-react';
 import {
-  AreaChart, Area, BarChart, Bar,
+  AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer,
+  ResponsiveContainer, Legend,
 } from 'recharts';
 
 /* ── shared custom tooltip ── */
@@ -192,6 +192,100 @@ export default function Analytics() {
             </p>
           </div>
           <div className="an-banner-pill">{commissionRates.platform}% / {commissionRates.farmer}%</div>
+        </div>
+
+        {/* Commission Breakdown Pie Chart */}
+        <div className="an-card">
+          <div className="an-card-head">
+            <h3 className="an-card-title">Commission Breakdown</h3>
+            <span className="an-badge">By source</span>
+          </div>
+          <div className="an-pie-container">
+            <div className="an-pie-wrap">
+              {(() => {
+                const farmComm = stats?.revenue?.farmCommission || 0;
+                const restComm = stats?.revenue?.restaurantCommission || 0;
+                const riderComm = stats?.revenue?.riderCommission || 0;
+                const total = farmComm + restComm + riderComm;
+
+                const pieData = [
+                  { name: 'Farm Commission', value: farmComm, color: '#2d5a27' },
+                  { name: 'Restaurant Commission', value: restComm, color: '#f59e0b' },
+                  { name: 'Rider Commission', value: riderComm, color: '#0ea5e9' },
+                ].filter(d => d.value > 0);
+
+                if (total === 0) {
+                  return (
+                    <div className="an-empty-chart an-empty-chart-lg">
+                      No commission data available
+                    </div>
+                  );
+                }
+
+                return (
+                  <ResponsiveContainer width="100%" height={320}>
+                    <PieChart margin={{ top: 30, right: 30, bottom: 30, left: 30 }}>
+                      <Pie
+                        data={pieData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={55}
+                        outerRadius={90}
+                        paddingAngle={3}
+                        dataKey="value"
+                        label={({ name, percent }) => `${name.split(' ')[0]} ${(percent * 100).toFixed(0)}%`}
+                        labelLine={{ stroke: '#999', strokeWidth: 1 }}
+                      >
+                        {pieData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        formatter={(value) => `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                        contentStyle={{ background: '#1a2e1a', borderRadius: 10, border: 'none', color: '#fff', fontSize: 13 }}
+                        itemStyle={{ color: '#e5e7eb' }}
+                        labelStyle={{ color: '#a3d977', fontWeight: 500 }}
+                      />
+                      <Legend
+                        verticalAlign="bottom"
+                        height={36}
+                        formatter={(value, entry) => (
+                          <span style={{ color: '#555', fontSize: 13 }}>{value}</span>
+                        )}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                );
+              })()}
+            </div>
+            <div className="an-pie-legend">
+              <div className="an-pie-legend-item">
+                <div className="an-pie-dot" style={{ background: '#2d5a27' }} />
+                <div>
+                  <p className="an-pie-legend-label">Farm Commission</p>
+                  <p className="an-pie-legend-value">${(stats?.revenue?.farmCommission || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+              </div>
+              <div className="an-pie-legend-item">
+                <div className="an-pie-dot" style={{ background: '#f59e0b' }} />
+                <div>
+                  <p className="an-pie-legend-label">Restaurant Commission</p>
+                  <p className="an-pie-legend-value">${(stats?.revenue?.restaurantCommission || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+              </div>
+              <div className="an-pie-legend-item">
+                <div className="an-pie-dot" style={{ background: '#0ea5e9' }} />
+                <div>
+                  <p className="an-pie-legend-label">Rider Commission</p>
+                  <p className="an-pie-legend-value">${(stats?.revenue?.riderCommission || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+              </div>
+              <div className="an-pie-total">
+                <p className="an-pie-total-label">Total Platform Commission</p>
+                <p className="an-pie-total-value">${(stats?.revenue?.platformCommission || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Revenue charts */}
@@ -568,5 +662,70 @@ const styles = `
   height: 100%; border-radius: 99px;
   transition: width 0.6s cubic-bezier(0.22,1,0.36,1);
   opacity: 0.75;
+}
+
+/* Pie chart styles */
+.an-pie-container {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+  align-items: center;
+}
+@media (min-width: 768px) {
+  .an-pie-container { grid-template-columns: 1fr 1fr; }
+}
+.an-pie-wrap {
+  min-height: 300px;
+  padding-top: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.an-pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.an-pie-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.an-pie-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+.an-pie-legend-label {
+  font-size: 13px;
+  color: #888;
+  margin: 0 0 2px;
+}
+.an-pie-legend-value {
+  font-family: 'Fraunces', serif;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+.an-pie-total {
+  margin-top: 8px;
+  padding-top: 16px;
+  border-top: 1px solid #f0ede6;
+}
+.an-pie-total-label {
+  font-size: 12px;
+  color: #999;
+  margin: 0 0 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.an-pie-total-value {
+  font-family: 'Fraunces', serif;
+  font-size: 24px;
+  font-weight: 600;
+  color: #2d5a27;
+  margin: 0;
 }
 `;

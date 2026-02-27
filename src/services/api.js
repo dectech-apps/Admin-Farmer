@@ -1,7 +1,7 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'https://farmers.api.dectechgh.com/api/v1';
-// const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
+// const API_URL = import.meta.env.VITE_API_URL || 'https://farmers.api.dectechgh.com/api/v1';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api/v1';
 
 const api = axios.create({
   baseURL: API_URL,
@@ -43,6 +43,7 @@ export const adminAPI = {
   getFarmers: (params) => api.get('/admin/farmers', { params }),
   getFarmerDetails: (farmerId) => api.get(`/admin/farmers/${farmerId}`),
   getRiders: (params) => api.get('/admin/riders', { params }),
+  getRiderDetails: (riderId) => api.get(`/admin/riders/${riderId}`),
   getCustomers: (params) => api.get('/admin/customers', { params }),
   getOrders: (params) => api.get('/admin/orders', { params }),
   getRevenueAnalytics: (period) => api.get('/admin/analytics/revenue', { params: { period } }),
@@ -71,6 +72,13 @@ export const adminAPI = {
   deleteRider: (riderId) => api.delete(`/admin/riders/${riderId}`),
   updateCustomer: (customerId, data) => api.patch(`/admin/customers/${customerId}`, data),
   deleteCustomer: (customerId) => api.delete(`/admin/customers/${customerId}`),
+  // Products
+  getProductsStats: () => api.get('/admin/products/stats'),
+  getProductsTrends: (period) => api.get('/admin/products/trends', { params: { period } }),
+  getProducts: (params) => api.get('/admin/products', { params }),
+  getProductDetails: (productId, type) => api.get(`/admin/products/${productId}`, { params: { type } }),
+  updateProduct: (productId, type, data) => api.patch(`/admin/products/${productId}`, data, { params: { type } }),
+  deleteProduct: (productId, type) => api.delete(`/admin/products/${productId}`, { params: { type } }),
 };
 
 export default api;

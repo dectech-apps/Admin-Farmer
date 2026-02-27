@@ -1,10 +1,16 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { adminAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import DataTable from '../components/DataTable';
 import { Shield, ShieldOff, DollarSign, Search, Leaf, ChevronLeft, ChevronRight, Edit2, Trash2, X, AlertCircle } from 'lucide-react';
 
 export default function Farmers() {
+  const { user } = useAuth();
+
+  // Check if user is admin (empty permissions array means super admin with all access)
+  const isAdmin = !user?.permissions || user.permissions.length === 0;
+
   const [farmers, setFarmers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -272,12 +278,16 @@ export default function Farmers() {
                             <Link to={`/farmers/${row.id}`} className="fm-view-btn">
                               View
                             </Link>
-                            <button className="fm-action-btn fm-action-edit" onClick={() => openEditModal(row)}>
-                              <Edit2 size={14} />
-                            </button>
-                            <button className="fm-action-btn fm-action-delete" onClick={() => openDeleteModal(row)}>
-                              <Trash2 size={14} />
-                            </button>
+                            {isAdmin && (
+                              <>
+                                <button className="fm-action-btn fm-action-edit" onClick={() => openEditModal(row)}>
+                                  <Edit2 size={14} />
+                                </button>
+                                <button className="fm-action-btn fm-action-delete" onClick={() => openDeleteModal(row)}>
+                                  <Trash2 size={14} />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
 

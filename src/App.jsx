@@ -9,11 +9,13 @@ import FarmerDetails from './pages/FarmerDetails';
 import Restaurants from './pages/Restaurants';
 import RestaurantDetails from './pages/RestaurantDetails';
 import Riders from './pages/Riders';
+import RiderDetails from './pages/RiderDetails';
 import Customers from './pages/Customers';
 import Orders from './pages/Orders';
 import Payments from './pages/Payments';
 import Analytics from './pages/Analytics';
 import Users from './pages/Users';
+import Products from './pages/Products';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -116,6 +118,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/riders/:riderId"
+        element={
+          <PrivateRoute permission="riders">
+            <RiderDetails />
+          </PrivateRoute>
+        }
+      />
+      <Route
         path="/customers"
         element={
           <PrivateRoute permission="customers">
@@ -152,6 +162,14 @@ function AppRoutes() {
         element={
           <PrivateRoute permission="users">
             <Users />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/products"
+        element={
+          <PrivateRoute permission="products">
+            <Products />
           </PrivateRoute>
         }
       />

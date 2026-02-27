@@ -1,9 +1,15 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { adminAPI } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { Shield, ShieldOff, DollarSign, Search, UtensilsCrossed, ChevronLeft, ChevronRight, Star, MapPin, Edit2, Trash2, X, AlertCircle } from 'lucide-react';
 
 export default function Restaurants() {
+  const { user } = useAuth();
+
+  // Check if user is admin (empty permissions array means super admin with all access)
+  const isAdmin = !user?.permissions || user.permissions.length === 0;
+
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
@@ -255,12 +261,16 @@ export default function Restaurants() {
                             <Link to={`/restaurants/${row.id}`} className="rs-view-btn">
                               View
                             </Link>
-                            <button className="rs-action-btn rs-action-edit" onClick={() => openEditModal(row)}>
-                              <Edit2 size={14} />
-                            </button>
-                            <button className="rs-action-btn rs-action-delete" onClick={() => openDeleteModal(row)}>
-                              <Trash2 size={14} />
-                            </button>
+                            {isAdmin && (
+                              <>
+                                <button className="rs-action-btn rs-action-edit" onClick={() => openEditModal(row)}>
+                                  <Edit2 size={14} />
+                                </button>
+                                <button className="rs-action-btn rs-action-delete" onClick={() => openDeleteModal(row)}>
+                                  <Trash2 size={14} />
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
 

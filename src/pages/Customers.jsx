@@ -1,13 +1,31 @@
 import { useState, useEffect } from 'react';
 import { adminAPI } from '../services/api';
-import { User, ShoppingBag, MapPin, DollarSign, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { User, ShoppingBag, MapPin, DollarSign, Search, ChevronLeft, ChevronRight, Edit2, Trash2, X, AlertCircle } from 'lucide-react';
 
 export default function Customers() {
+  const { user } = useAuth();
+
+  // Check if user is admin (empty permissions array means super admin with all access)
+  const isAdmin = !user?.permissions || user.permissions.length === 0;
+
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
+
+  // Edit modal state
+  const [editModal, setEditModal] = useState(false);
+  const [editData, setEditData] = useState({ name: '', email: '', phone: '', address: '' });
+  const [editingCustomer, setEditingCustomer] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+
+  // Delete modal state
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [deletingCustomer, setDeletingCustomer] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => { fetchCustomers(); }, [page, search]);
 
@@ -52,6 +70,53 @@ export default function Customers() {
   const avatarColor = (name = '') => {
     const idx = name.charCodeAt(0) % AVATAR_COLORS.length;
     return AVATAR_COLORS[idx];
+  };
+
+  // Edit handlers
+  const openEditModal = (customer) => {
+    setEditingCustomer(customer);
+    setEditData({
+      name: customer.name || '',
+      email: customer.email || '',
+      phone: customer.phone || '',
+      address: customer.address || '',
+    });
+    setEditError('');
+    setEditModal(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setEditError('');
+    try {
+      await adminAPI.updateCustomer(editingCustomer.id, editData);
+      setEditModal(false);
+      fetchCustomers();
+    } catch (err) {
+      setEditError(err.response?.data?.message || 'Failed to update customer');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Delete handlers
+  const openDeleteModal = (customer) => {
+    setDeletingCustomer(customer);
+    setDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await adminAPI.deleteCustomer(deletingCustomer.id);
+      setDeleteModal(false);
+      fetchCustomers();
+    } catch (err) {
+      console.error('Failed to delete customer:', err);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -104,7 +169,7 @@ export default function Customers() {
               <table className="cu-table">
                 <thead>
                   <tr>
-                    {['Customer', 'Phone', 'Address', 'Orders', 'Total Spent', 'Joined'].map(h => (
+                    {['Customer', 'Phone', 'Address', 'Orders', 'Total Spent', 'Joined', 'Actions'].map(h => (
                       <th key={h} className="cu-th">{h}</th>
                     ))}
                   </tr>
@@ -170,6 +235,33 @@ export default function Customers() {
                           </span>
                         </td>
 
+                        {/* Actions */}
+                        <td className="cu-td">
+                          <div className="cu-actions">
+                            {isAdmin && (
+                              <>
+                                <button
+                                  className="cu-action-btn cu-action-edit"
+                                  onClick={() => openEditModal(row)}
+                                  title="Edit customer"
+                                >
+                                  <Edit2 size={14} />
+                                </button>
+                                <button
+                                  className="cu-action-btn cu-action-delete"
+                                  onClick={() => openDeleteModal(row)}
+                                  title="Delete customer"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </>
+                            )}
+                            {!isAdmin && (
+                              <span className="cu-no-actions">View only</span>
+                            )}
+                          </div>
+                        </td>
+
                       </tr>
                     );
                   })}
@@ -220,6 +312,104 @@ export default function Customers() {
 
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {editModal && (
+        <div className="cu-modal-overlay" onClick={() => setEditModal(false)}>
+          <div className="cu-modal" onClick={e => e.stopPropagation()}>
+            <div className="cu-modal-header">
+              <h2 className="cu-modal-title">Edit Customer</h2>
+              <button className="cu-modal-close" onClick={() => setEditModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="cu-modal-body">
+              {editError && (
+                <div className="cu-error">
+                  <AlertCircle size={16} />
+                  {editError}
+                </div>
+              )}
+
+              <div className="cu-form-group">
+                <label className="cu-label">Name</label>
+                <input
+                  type="text"
+                  className="cu-input"
+                  value={editData.name}
+                  onChange={e => setEditData({ ...editData, name: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="cu-form-group">
+                <label className="cu-label">Email</label>
+                <input
+                  type="email"
+                  className="cu-input"
+                  value={editData.email}
+                  onChange={e => setEditData({ ...editData, email: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="cu-form-group">
+                <label className="cu-label">Phone</label>
+                <input
+                  type="text"
+                  className="cu-input"
+                  value={editData.phone}
+                  onChange={e => setEditData({ ...editData, phone: e.target.value })}
+                />
+              </div>
+
+              <div className="cu-form-group">
+                <label className="cu-label">Address</label>
+                <input
+                  type="text"
+                  className="cu-input"
+                  value={editData.address}
+                  onChange={e => setEditData({ ...editData, address: e.target.value })}
+                  placeholder="Customer address"
+                />
+              </div>
+
+              <div className="cu-modal-actions">
+                <button type="button" className="cu-btn cu-btn-cancel" onClick={() => setEditModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="cu-btn cu-btn-save" disabled={saving}>
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal && (
+        <div className="cu-modal-overlay" onClick={() => setDeleteModal(false)}>
+          <div className="cu-modal cu-modal-delete" onClick={e => e.stopPropagation()}>
+            <div className="cu-delete-icon">
+              <AlertCircle size={32} color="#dc2626" />
+            </div>
+            <h2 className="cu-delete-title">Delete Customer</h2>
+            <p className="cu-delete-text">
+              Are you sure you want to delete <strong>{deletingCustomer?.name}</strong>? This action cannot be undone.
+            </p>
+            <div className="cu-modal-actions">
+              <button className="cu-btn cu-btn-cancel" onClick={() => setDeleteModal(false)}>
+                Cancel
+              </button>
+              <button className="cu-btn cu-btn-delete" onClick={handleDelete} disabled={deleting}>
+                {deleting ? 'Deleting...' : 'Delete Customer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -421,4 +611,210 @@ const styles = `
   border-color: #451a03 !important;
 }
 .cu-page-ellipsis { font-size: 13px; color: #bbb; padding: 0 4px; }
+
+/* Actions */
+.cu-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.cu-action-btn {
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cu-action-edit {
+  background: #fef3c7;
+  color: #b45309;
+}
+.cu-action-edit:hover {
+  background: #fde68a;
+}
+.cu-action-delete {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.cu-action-delete:hover {
+  background: #fecaca;
+}
+.cu-no-actions {
+  font-size: 12px;
+  color: #999;
+  font-style: italic;
+}
+
+/* Modal */
+.cu-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+.cu-modal {
+  background: #fff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+}
+.cu-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f0ede6;
+}
+.cu-modal-title {
+  font-family: 'Fraunces', serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+.cu-modal-close {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  background: #f5f2ec;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.15s;
+}
+.cu-modal-close:hover {
+  background: #e8e4dc;
+  color: #333;
+}
+.cu-modal-body {
+  padding: 24px;
+}
+.cu-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+/* Form */
+.cu-form-group {
+  margin-bottom: 16px;
+}
+.cu-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+  margin-bottom: 6px;
+}
+.cu-input {
+  width: 100%;
+  padding: 10px 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  border: 1.5px solid #e8e4dc;
+  border-radius: 10px;
+  background: #faf9f6;
+  color: #222;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.cu-input:focus {
+  border-color: #b45309;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(180,83,9,0.08);
+}
+.cu-input::placeholder {
+  color: #bbb;
+}
+.cu-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  color: #dc2626;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+/* Buttons */
+.cu-btn {
+  padding: 10px 20px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.cu-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.cu-btn-cancel {
+  background: #f5f2ec;
+  color: #666;
+}
+.cu-btn-cancel:hover:not(:disabled) {
+  background: #e8e4dc;
+}
+.cu-btn-save {
+  background: #b45309;
+  color: #fff;
+}
+.cu-btn-save:hover:not(:disabled) {
+  background: #92400e;
+}
+.cu-btn-delete {
+  background: #dc2626;
+  color: #fff;
+}
+.cu-btn-delete:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+/* Delete Modal */
+.cu-modal-delete {
+  text-align: center;
+  padding: 32px;
+  max-width: 400px;
+}
+.cu-delete-icon {
+  width: 64px; height: 64px;
+  background: #fef2f2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+.cu-delete-title {
+  font-family: 'Fraunces', serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 12px;
+}
+.cu-delete-text {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
+  margin: 0 0 24px;
+}
+.cu-modal-delete .cu-modal-actions {
+  justify-content: center;
+  margin-top: 0;
+}
 `;

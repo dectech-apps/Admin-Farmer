@@ -1,13 +1,33 @@
 import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { adminAPI } from '../services/api';
-import { Truck, Star, CheckCircle, XCircle, Search, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Truck, Star, CheckCircle, XCircle, Search, ChevronLeft, ChevronRight, Edit2, Trash2, X, AlertCircle, Eye } from 'lucide-react';
 
 export default function Riders() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+
+  // Check if user is admin (empty permissions array means super admin with all access)
+  const isAdmin = !user?.permissions || user.permissions.length === 0;
+
   const [riders, setRiders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
+
+  // Edit modal state
+  const [editModal, setEditModal] = useState(false);
+  const [editData, setEditData] = useState({ name: '', email: '', phone: '', vehicle_type: '', license_plate: '' });
+  const [editingRider, setEditingRider] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+
+  // Delete modal state
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [deletingRider, setDeletingRider] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => { fetchRiders(); }, [page, search]);
 
@@ -50,6 +70,54 @@ export default function Riders() {
         <span className="rd-rating-num">{val ? val.toFixed(1) : '—'}</span>
       </div>
     );
+  };
+
+  // Edit handlers
+  const openEditModal = (rider) => {
+    setEditingRider(rider);
+    setEditData({
+      name: rider.name || '',
+      email: rider.email || '',
+      phone: rider.phone || '',
+      vehicle_type: rider.vehicle_type || '',
+      license_plate: rider.license_plate || '',
+    });
+    setEditError('');
+    setEditModal(true);
+  };
+
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setEditError('');
+    try {
+      await adminAPI.updateRider(editingRider.id, editData);
+      setEditModal(false);
+      fetchRiders();
+    } catch (err) {
+      setEditError(err.response?.data?.message || 'Failed to update rider');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Delete handlers
+  const openDeleteModal = (rider) => {
+    setDeletingRider(rider);
+    setDeleteModal(true);
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await adminAPI.deleteRider(deletingRider.id);
+      setDeleteModal(false);
+      fetchRiders();
+    } catch (err) {
+      console.error('Failed to delete rider:', err);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -102,7 +170,7 @@ export default function Riders() {
               <table className="rd-table">
                 <thead>
                   <tr>
-                    {['Rider', 'Phone', 'Vehicle', 'Deliveries', 'Rating', 'Status', 'Joined'].map(h => (
+                    {['Rider', 'Phone', 'Vehicle', 'Deliveries', 'Rating', 'Status', 'Joined', 'Actions'].map(h => (
                       <th key={h} className="rd-th">{h}</th>
                     ))}
                   </tr>
@@ -169,6 +237,41 @@ export default function Riders() {
                         </span>
                       </td>
 
+                      {/* Actions */}
+                      <td className="rd-td">
+                        <div className="rd-actions">
+                          <button
+                            className="rd-action-btn rd-action-view"
+                            onClick={() => {
+                              console.log('Navigating to rider details with row:', row);
+                              console.log('Row ID:', row.id);
+                              navigate(`/riders/${row.id}`);
+                            }}
+                            title="View details"
+                          >
+                            <Eye size={14} />
+                          </button>
+                          {isAdmin && (
+                            <>
+                              <button
+                                className="rd-action-btn rd-action-edit"
+                                onClick={() => openEditModal(row)}
+                                title="Edit rider"
+                              >
+                                <Edit2 size={14} />
+                              </button>
+                              <button
+                                className="rd-action-btn rd-action-delete"
+                                onClick={() => openDeleteModal(row)}
+                                title="Delete rider"
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+
                     </tr>
                   ))}
                 </tbody>
@@ -218,6 +321,115 @@ export default function Riders() {
 
         </div>
       </div>
+
+      {/* Edit Modal */}
+      {editModal && (
+        <div className="rd-modal-overlay" onClick={() => setEditModal(false)}>
+          <div className="rd-modal" onClick={e => e.stopPropagation()}>
+            <div className="rd-modal-header">
+              <h2 className="rd-modal-title">Edit Rider</h2>
+              <button className="rd-modal-close" onClick={() => setEditModal(false)}>
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditSubmit} className="rd-modal-body">
+              {editError && (
+                <div className="rd-error">
+                  <AlertCircle size={16} />
+                  {editError}
+                </div>
+              )}
+
+              <div className="rd-form-group">
+                <label className="rd-label">Name</label>
+                <input
+                  type="text"
+                  className="rd-input"
+                  value={editData.name}
+                  onChange={e => setEditData({ ...editData, name: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="rd-form-group">
+                <label className="rd-label">Email</label>
+                <input
+                  type="email"
+                  className="rd-input"
+                  value={editData.email}
+                  onChange={e => setEditData({ ...editData, email: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="rd-form-group">
+                <label className="rd-label">Phone</label>
+                <input
+                  type="text"
+                  className="rd-input"
+                  value={editData.phone}
+                  onChange={e => setEditData({ ...editData, phone: e.target.value })}
+                />
+              </div>
+
+              <div className="rd-form-row">
+                <div className="rd-form-group">
+                  <label className="rd-label">Vehicle Type</label>
+                  <input
+                    type="text"
+                    className="rd-input"
+                    value={editData.vehicle_type}
+                    onChange={e => setEditData({ ...editData, vehicle_type: e.target.value })}
+                    placeholder="e.g., Motorcycle, Bicycle"
+                  />
+                </div>
+                <div className="rd-form-group">
+                  <label className="rd-label">License Plate</label>
+                  <input
+                    type="text"
+                    className="rd-input"
+                    value={editData.license_plate}
+                    onChange={e => setEditData({ ...editData, license_plate: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              <div className="rd-modal-actions">
+                <button type="button" className="rd-btn rd-btn-cancel" onClick={() => setEditModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="rd-btn rd-btn-save" disabled={saving}>
+                  {saving ? 'Saving...' : 'Save Changes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deleteModal && (
+        <div className="rd-modal-overlay" onClick={() => setDeleteModal(false)}>
+          <div className="rd-modal rd-modal-delete" onClick={e => e.stopPropagation()}>
+            <div className="rd-delete-icon">
+              <AlertCircle size={32} color="#dc2626" />
+            </div>
+            <h2 className="rd-delete-title">Delete Rider</h2>
+            <p className="rd-delete-text">
+              Are you sure you want to delete <strong>{deletingRider?.name}</strong>? This action cannot be undone.
+            </p>
+            <div className="rd-modal-actions">
+              <button className="rd-btn rd-btn-cancel" onClick={() => setDeleteModal(false)}>
+                Cancel
+              </button>
+              <button className="rd-btn rd-btn-delete" onClick={handleDelete} disabled={deleting}>
+                {deleting ? 'Deleting...' : 'Delete Rider'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
@@ -428,4 +640,217 @@ const styles = `
   border-color: #0c2340 !important;
 }
 .rd-page-ellipsis { font-size: 13px; color: #bbb; padding: 0 4px; }
+
+/* Actions */
+.rd-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.rd-action-btn {
+  width: 32px; height: 32px;
+  display: flex; align-items: center; justify-content: center;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.rd-action-view {
+  background: #f5f2ec;
+  color: #666;
+}
+.rd-action-view:hover {
+  background: #e8e4dc;
+}
+.rd-action-edit {
+  background: #e0f2fe;
+  color: #0369a1;
+}
+.rd-action-edit:hover {
+  background: #bae6fd;
+}
+.rd-action-delete {
+  background: #fee2e2;
+  color: #dc2626;
+}
+.rd-action-delete:hover {
+  background: #fecaca;
+}
+
+/* Modal */
+.rd-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+.rd-modal {
+  background: #fff;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+}
+.rd-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid #f0ede6;
+}
+.rd-modal-title {
+  font-family: 'Fraunces', serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0;
+}
+.rd-modal-close {
+  width: 36px; height: 36px;
+  display: flex; align-items: center; justify-content: center;
+  background: #f5f2ec;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  color: #666;
+  transition: all 0.15s;
+}
+.rd-modal-close:hover {
+  background: #e8e4dc;
+  color: #333;
+}
+.rd-modal-body {
+  padding: 24px;
+}
+.rd-modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+/* Form */
+.rd-form-group {
+  margin-bottom: 16px;
+}
+.rd-form-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+.rd-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #555;
+  margin-bottom: 6px;
+}
+.rd-input {
+  width: 100%;
+  padding: 10px 14px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  border: 1.5px solid #e8e4dc;
+  border-radius: 10px;
+  background: #faf9f6;
+  color: #222;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.rd-input:focus {
+  border-color: #0369a1;
+  background: #fff;
+  box-shadow: 0 0 0 3px rgba(3,105,161,0.08);
+}
+.rd-input::placeholder {
+  color: #bbb;
+}
+.rd-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  color: #dc2626;
+  font-size: 13px;
+  margin-bottom: 16px;
+}
+
+/* Buttons */
+.rd-btn {
+  padding: 10px 20px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.rd-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.rd-btn-cancel {
+  background: #f5f2ec;
+  color: #666;
+}
+.rd-btn-cancel:hover:not(:disabled) {
+  background: #e8e4dc;
+}
+.rd-btn-save {
+  background: #0369a1;
+  color: #fff;
+}
+.rd-btn-save:hover:not(:disabled) {
+  background: #0284c7;
+}
+.rd-btn-delete {
+  background: #dc2626;
+  color: #fff;
+}
+.rd-btn-delete:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+/* Delete Modal */
+.rd-modal-delete {
+  text-align: center;
+  padding: 32px;
+  max-width: 400px;
+}
+.rd-delete-icon {
+  width: 64px; height: 64px;
+  background: #fef2f2;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 16px;
+}
+.rd-delete-title {
+  font-family: 'Fraunces', serif;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a1a;
+  margin: 0 0 12px;
+}
+.rd-delete-text {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.5;
+  margin: 0 0 24px;
+}
+.rd-modal-delete .rd-modal-actions {
+  justify-content: center;
+  margin-top: 0;
+}
 `;
