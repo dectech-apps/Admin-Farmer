@@ -4,7 +4,7 @@ import {
   ArrowLeft, UtensilsCrossed, Mail, Phone, MapPin, Calendar,
   Building2, Globe, CheckCircle, XCircle, Clock,
   Wallet, TrendingUp, ArrowDownToLine, ShieldCheck, ShieldX, ShieldAlert,
-  AlertCircle, Star, DollarSign, Truck,
+  AlertCircle, Star, DollarSign, Truck, User, Image,
 } from 'lucide-react';
 import { adminAPI } from '../services/api';
 
@@ -28,15 +28,21 @@ export default function RestaurantDetails() {
   const [error, setError] = useState('');
   const [verifying, setVerifying] = useState(false);
 
-  const assetBase = useMemo(
-    () => (import.meta.env.VITE_API_URL || '').replace(/\/api\/v1\/?$/, ''),
-    []
-  );
+  const assetBase = useMemo(() => {
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    // Remove /api/v1 suffix to get base URL for static assets
+    const base = apiUrl.replace(/\/api\/v1\/?$/, '');
+    return base || '';
+  }, []);
 
   const toAssetUrl = (url) => {
     if (!url) return null;
+    // Already a full URL
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    return `${assetBase}${url.startsWith('/') ? '' : '/'}${url}`;
+    // Handle relative paths - ensure proper formatting
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    // If we have a base URL, prepend it; otherwise use relative path
+    return assetBase ? `${assetBase}${cleanUrl}` : cleanUrl;
   };
 
   const fetchDetails = async () => {
@@ -194,6 +200,19 @@ export default function RestaurantDetails() {
               </div>
               <h2 className="rd-section-title">Restaurant Details</h2>
             </div>
+
+            {/* Restaurant Image */}
+            {restaurant.image_url && (
+              <div className="rd-business-img-wrap">
+                <img
+                  src={toAssetUrl(restaurant.image_url)}
+                  alt={restaurant.name}
+                  className="rd-business-img"
+                  onError={(e) => { e.target.parentElement.style.display = 'none'; }}
+                />
+              </div>
+            )}
+
             <div className="rd-rows">
               <div className="rd-row">
                 <UtensilsCrossed size={14} color="#c4bfb5" />
@@ -223,10 +242,28 @@ export default function RestaurantDetails() {
               </div>
               <div className="rd-row">
                 <MapPin size={14} color="#c4bfb5" />
-                <span className="rd-row-label">Location</span>
-                <span className="rd-row-val">
-                  {[restaurant.street_address, restaurant.city, restaurant.country].filter(Boolean).join(', ') || '—'}
-                </span>
+                <span className="rd-row-label">Street Address</span>
+                <span className="rd-row-val">{restaurant.street_address || '—'}</span>
+              </div>
+              <div className="rd-row">
+                <span style={{ width: 14 }} />
+                <span className="rd-row-label">City</span>
+                <span className="rd-row-val">{restaurant.city || '—'}</span>
+              </div>
+              <div className="rd-row">
+                <span style={{ width: 14 }} />
+                <span className="rd-row-label">State</span>
+                <span className="rd-row-val">{restaurant.state || '—'}</span>
+              </div>
+              <div className="rd-row">
+                <span style={{ width: 14 }} />
+                <span className="rd-row-label">Zipcode</span>
+                <span className="rd-row-val">{restaurant.zipcode || '—'}</span>
+              </div>
+              <div className="rd-row">
+                <span style={{ width: 14 }} />
+                <span className="rd-row-label">Country</span>
+                <span className="rd-row-val">{restaurant.country || '—'}</span>
               </div>
               <div className="rd-row">
                 <Clock size={14} color="#c4bfb5" />
@@ -284,6 +321,22 @@ export default function RestaurantDetails() {
               </div>
               <h2 className="rd-section-title">Owner Details</h2>
             </div>
+
+            {/* Owner Profile Image */}
+            <div className="rd-profile-img-wrap">
+              {owner.profile_image ? (
+                <img
+                  src={toAssetUrl(owner.profile_image)}
+                  alt={owner.name}
+                  className="rd-profile-img"
+                  onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                />
+              ) : null}
+              <div className="rd-profile-img-placeholder" style={{ display: owner.profile_image ? 'none' : 'flex' }}>
+                <User size={32} color="#c4bfb5" />
+              </div>
+            </div>
+
             <div className="rd-rows">
               <div className="rd-row">
                 <Building2 size={14} color="#c4bfb5" />
@@ -800,6 +853,45 @@ const styles = `
   height: 180px;
   display: flex; align-items: center; justify-content: center;
   color: #c4bfb5; font-size: 13px;
+}
+
+/* profile image */
+.rd-profile-img-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.rd-profile-img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #fffbeb;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.rd-profile-img-placeholder {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: #f5f2ec;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #e8e4dc;
+}
+
+/* business image */
+.rd-business-img-wrap {
+  margin-bottom: 20px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1.5px solid #f0ede6;
+}
+.rd-business-img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
 }
 
 .rd-empty-note { font-size: 13.5px; color: #bbb; padding: 8px 0; margin: 0; }

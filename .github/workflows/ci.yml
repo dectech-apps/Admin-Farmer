@@ -1,0 +1,44 @@
+
+name: Food Master Admin Application
+
+on:
+  push:
+    branches: 
+       - main
+
+jobs:
+  build: 
+
+    runs-on: ubuntu-latest     
+
+    strategy:
+      matrix:
+        node-version: ["16.x"]  
+
+    steps:
+      - name: Install SSH Keys
+        uses: shimataro/ssh-key-action@v2    
+        with:
+          key: ${{ secrets.PRODUCTION_SSH_PRIVATE_KEY }}
+          known_hosts: "placeholder-for-known-hosts"
+
+      - name: Adding Known Hosts
+        run: ssh-keyscan -H ${{ secrets.PRODUCTION_DEPLOY_HOST }} >> ~/.ssh/known_hosts    
+      - name: Checking out Food Master admin frontend application
+        uses: actions/checkout@v4
+      
+      - name: Using Node.js ${{ matrix.node-version }}  
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: yarn  
+        
+      - run: yarn install 
+    
+      - name: Building The UI Codes For Production
+   
+        run: yarn run build
+      
+      - name: Deploy To Food Master Production Server
+        run: rsync -avz  build/* ${{ secrets.PRODUCTION_DEPLOY_USER }}@${{ secrets.PRODUCTION_DEPLOY_HOST }}:${{secrets.PRODUCTION_DEPLOY_PATH}}
+      

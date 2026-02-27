@@ -4,7 +4,7 @@ import {
   ArrowLeft, Leaf, Mail, Phone, MapPin, Calendar,
   Building2, Globe, CheckCircle, XCircle, Clock,
   Wallet, TrendingUp, ArrowDownToLine, ShieldCheck, ShieldX, ShieldAlert,
-  AlertCircle,
+  AlertCircle, User, Image,
 } from 'lucide-react';
 import { adminAPI } from '../services/api';
 
@@ -27,15 +27,21 @@ export default function FarmerDetails() {
   const [error, setError] = useState('');
   const [verifying, setVerifying] = useState(false);
 
-  const assetBase = useMemo(
-    () => (import.meta.env.VITE_API_URL || '').replace(/\/api\/v1\/?$/, ''),
-    []
-  );
+  const assetBase = useMemo(() => {
+    const apiUrl = import.meta.env.VITE_API_URL || '';
+    // Remove /api/v1 suffix to get base URL for static assets
+    const base = apiUrl.replace(/\/api\/v1\/?$/, '');
+    return base || '';
+  }, []);
 
   const toAssetUrl = (url) => {
     if (!url) return null;
+    // Already a full URL
     if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    return `${assetBase}${url.startsWith('/') ? '' : '/'}${url}`;
+    // Handle relative paths - ensure proper formatting
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    // If we have a base URL, prepend it; otherwise use relative path
+    return assetBase ? `${assetBase}${cleanUrl}` : cleanUrl;
   };
 
   const fetchDetails = async () => {
@@ -165,6 +171,22 @@ export default function FarmerDetails() {
               </div>
               <h2 className="fd-section-title">Farmer Profile</h2>
             </div>
+
+            {/* Profile Image */}
+            <div className="fd-profile-img-wrap">
+              {profile.profile_image ? (
+                <img
+                  src={toAssetUrl(profile.profile_image)}
+                  alt={profile.name}
+                  className="fd-profile-img"
+                  onError={(e) => { e.target.style.display = 'none'; e.target.nextSibling.style.display = 'flex'; }}
+                />
+              ) : null}
+              <div className="fd-profile-img-placeholder" style={{ display: profile.profile_image ? 'none' : 'flex' }}>
+                <User size={32} color="#c4bfb5" />
+              </div>
+            </div>
+
             <div className="fd-rows">
               <div className="fd-row">
                 <Mail size={14} color="#c4bfb5" />
@@ -206,6 +228,18 @@ export default function FarmerDetails() {
               <p className="fd-empty-note">No farm profile found for this farmer.</p>
             ) : (
               <>
+                {/* Farm Image */}
+                {farm.image_url && (
+                  <div className="fd-business-img-wrap">
+                    <img
+                      src={toAssetUrl(farm.image_url)}
+                      alt={farm.name}
+                      className="fd-business-img"
+                      onError={(e) => { e.target.parentElement.style.display = 'none'; }}
+                    />
+                  </div>
+                )}
+
                 <div className="fd-rows">
                   <div className="fd-row">
                     <Leaf size={14} color="#c4bfb5" />
@@ -224,10 +258,28 @@ export default function FarmerDetails() {
                   </div>
                   <div className="fd-row">
                     <MapPin size={14} color="#c4bfb5" />
-                    <span className="fd-row-label">Location</span>
-                    <span className="fd-row-val">
-                      {[farm.street_address, farm.city, farm.country].filter(Boolean).join(', ') || '—'}
-                    </span>
+                    <span className="fd-row-label">Street Address</span>
+                    <span className="fd-row-val">{farm.street_address || '—'}</span>
+                  </div>
+                  <div className="fd-row">
+                    <span style={{ width: 14 }} />
+                    <span className="fd-row-label">City</span>
+                    <span className="fd-row-val">{farm.city || '—'}</span>
+                  </div>
+                  <div className="fd-row">
+                    <span style={{ width: 14 }} />
+                    <span className="fd-row-label">State</span>
+                    <span className="fd-row-val">{farm.state || '—'}</span>
+                  </div>
+                  <div className="fd-row">
+                    <span style={{ width: 14 }} />
+                    <span className="fd-row-label">Zipcode</span>
+                    <span className="fd-row-val">{farm.zipcode || '—'}</span>
+                  </div>
+                  <div className="fd-row">
+                    <span style={{ width: 14 }} />
+                    <span className="fd-row-label">Country</span>
+                    <span className="fd-row-val">{farm.country || '—'}</span>
                   </div>
                   <div className="fd-row">
                     <Globe size={14} color="#c4bfb5" />
@@ -648,6 +700,45 @@ const styles = `
   height: 180px;
   display: flex; align-items: center; justify-content: center;
   color: #c4bfb5; font-size: 13px;
+}
+
+/* profile image */
+.fd-profile-img-wrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+.fd-profile-img {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid #f0faf0;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+.fd-profile-img-placeholder {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: #f5f2ec;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 3px solid #e8e4dc;
+}
+
+/* business image */
+.fd-business-img-wrap {
+  margin-bottom: 20px;
+  border-radius: 14px;
+  overflow: hidden;
+  border: 1.5px solid #f0ede6;
+}
+.fd-business-img {
+  width: 100%;
+  height: 180px;
+  object-fit: cover;
+  display: block;
 }
 
 .fd-empty-note { font-size: 13.5px; color: #bbb; padding: 8px 0; margin: 0; }

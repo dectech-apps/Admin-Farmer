@@ -54,6 +54,22 @@ export const adminAPI = {
   // Payments
   getPayments: (params) => api.get('/admin/payments', { params }),
   getPaymentAnalytics: (period) => api.get('/admin/analytics/payments', { params: { period } }),
+  // System Users
+  getSystemUsers: (params) => api.get('/admin/system-users', { params }),
+  getSystemUserDetails: (userId) => api.get(`/admin/system-users/${userId}`),
+  createSystemUser: (data) => api.post('/admin/system-users', data),
+  updateSystemUser: (userId, data) => api.patch(`/admin/system-users/${userId}`, data),
+  deleteSystemUser: (userId) => api.delete(`/admin/system-users/${userId}`),
+  getAvailablePermissions: () => api.get('/admin/system-users/permissions'),
+  // Regular User Management (Edit/Delete)
+  updateFarmer: (farmerId, data) => api.patch(`/admin/farmers/${farmerId}`, data),
+  deleteFarmer: (farmerId) => api.delete(`/admin/farmers/${farmerId}`),
+  updateRestaurant: (restaurantId, data) => api.patch(`/admin/restaurants/${restaurantId}`, data),
+  deleteRestaurant: (restaurantId) => api.delete(`/admin/restaurants/${restaurantId}`),
+  updateRider: (riderId, data) => api.patch(`/admin/riders/${riderId}`, data),
+  deleteRider: (riderId) => api.delete(`/admin/riders/${riderId}`),
+  updateCustomer: (customerId, data) => api.patch(`/admin/customers/${customerId}`, data),
+  deleteCustomer: (customerId) => api.delete(`/admin/customers/${customerId}`),
 };
 
 export default api;

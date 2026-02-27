@@ -13,6 +13,7 @@ import Customers from './pages/Customers';
 import Orders from './pages/Orders';
 import Payments from './pages/Payments';
 import Analytics from './pages/Analytics';
+import Users from './pages/Users';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,8 +24,8 @@ const queryClient = new QueryClient({
   },
 });
 
-function PrivateRoute({ children }) {
-  const { user, loading } = useAuth();
+function PrivateRoute({ children, permission }) {
+  const { user, loading, hasPermission, getDefaultPage } = useAuth();
 
   if (loading) {
     return (
@@ -36,6 +37,12 @@ function PrivateRoute({ children }) {
 
   if (!user) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Check if user has permission for this route
+  if (permission && !hasPermission(permission)) {
+    const defaultPage = getDefaultPage();
+    return <Navigate to={defaultPage} replace />;
   }
 
   return <Layout>{children}</Layout>;
@@ -52,16 +59,18 @@ function AppRoutes() {
     );
   }
 
+  const { getDefaultPage } = useAuth();
+
   return (
     <Routes>
       <Route
         path="/login"
-        element={user ? <Navigate to="/" replace /> : <Login />}
+        element={user ? <Navigate to={getDefaultPage() || '/'} replace /> : <Login />}
       />
       <Route
         path="/"
         element={
-          <PrivateRoute>
+          <PrivateRoute permission="dashboard">
             <Dashboard />
           </PrivateRoute>
         }
@@ -69,7 +78,7 @@ function AppRoutes() {
       <Route
         path="/farmers"
         element={
-          <PrivateRoute>
+          <PrivateRoute permission="farmers">
             <Farmers />
           </PrivateRoute>
         }
@@ -77,7 +86,7 @@ function AppRoutes() {
       <Route
         path="/farmers/:farmerId"
         element={
-          <PrivateRoute>
+          <PrivateRoute permission="farmers">
             <FarmerDetails />
           </PrivateRoute>
         }
@@ -85,7 +94,7 @@ function AppRoutes() {
       <Route
         path="/restaurants"
         element={
-          <PrivateRoute>
+          <PrivateRoute permission="restaurants">
             <Restaurants />
           </PrivateRoute>
         }
@@ -93,7 +102,7 @@ function AppRoutes() {
       <Route
         path="/restaurants/:restaurantId"
         element={
-          <PrivateRoute>
+          <PrivateRoute permission="restaurants">
             <RestaurantDetails />
           </PrivateRoute>
         }
@@ -101,7 +110,7 @@ function AppRoutes() {
       <Route
         path="/riders"
         element={
-          <PrivateRoute>
+          <PrivateRoute permission="riders">
             <Riders />
           </PrivateRoute>
         }
@@ -109,7 +118,7 @@ function AppRoutes() {
       <Route
         path="/customers"
         element={
-          <PrivateRoute>
+          <PrivateRoute permission="customers">
             <Customers />
           </PrivateRoute>
         }
@@ -117,7 +126,7 @@ function AppRoutes() {
       <Route
         path="/orders"
         element={
-          <PrivateRoute>
+          <PrivateRoute permission="orders">
             <Orders />
           </PrivateRoute>
         }
@@ -125,7 +134,7 @@ function AppRoutes() {
       <Route
         path="/payments"
         element={
-          <PrivateRoute>
+          <PrivateRoute permission="payments">
             <Payments />
           </PrivateRoute>
         }
@@ -133,12 +142,20 @@ function AppRoutes() {
       <Route
         path="/analytics"
         element={
-          <PrivateRoute>
+          <PrivateRoute permission="analytics">
             <Analytics />
           </PrivateRoute>
         }
       />
-      <Route path="*" element={<Navigate to="/" replace />} />
+      <Route
+        path="/users"
+        element={
+          <PrivateRoute permission="users">
+            <Users />
+          </PrivateRoute>
+        }
+      />
+      <Route path="*" element={<Navigate to={user ? getDefaultPage() : '/login'} replace />} />
     </Routes>
   );
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { adminAPI } from '../services/api';
-import { Shield, ShieldOff, DollarSign, Search, UtensilsCrossed, ChevronLeft, ChevronRight, Star, MapPin } from 'lucide-react';
+import { Shield, ShieldOff, DollarSign, Search, UtensilsCrossed, ChevronLeft, ChevronRight, Star, MapPin, Edit2, Trash2, X, AlertCircle } from 'lucide-react';
 
 export default function Restaurants() {
   const [restaurants, setRestaurants] = useState([]);
@@ -10,6 +10,18 @@ export default function Restaurants() {
   const [totalPages, setTotalPages] = useState(1);
   const [search, setSearch] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
+
+  // Edit modal state
+  const [editModal, setEditModal] = useState(false);
+  const [editData, setEditData] = useState({ name: '', email: '', phone: '' });
+  const [editingRestaurant, setEditingRestaurant] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+
+  // Delete modal state
+  const [deleteModal, setDeleteModal] = useState(false);
+  const [deletingRestaurant, setDeletingRestaurant] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => { fetchRestaurants(); }, [page, search]);
 
@@ -47,6 +59,58 @@ export default function Restaurants() {
   };
 
   const initials = (name) => name?.charAt(0)?.toUpperCase() || 'R';
+
+  // Open edit modal
+  const openEditModal = (restaurant) => {
+    setEditingRestaurant(restaurant);
+    setEditData({
+      name: restaurant.owner_name || '',
+      email: restaurant.owner_email || '',
+      phone: restaurant.owner_phone || '',
+    });
+    setEditError('');
+    setEditModal(true);
+  };
+
+  // Handle edit submit
+  const handleEditSubmit = async (e) => {
+    e.preventDefault();
+    if (!editingRestaurant?.id) return;
+
+    setSaving(true);
+    setEditError('');
+    try {
+      await adminAPI.updateRestaurant(editingRestaurant.id, editData);
+      setEditModal(false);
+      fetchRestaurants();
+    } catch (err) {
+      setEditError(err.response?.data?.message || 'Failed to update restaurant');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Open delete modal
+  const openDeleteModal = (restaurant) => {
+    setDeletingRestaurant(restaurant);
+    setDeleteModal(true);
+  };
+
+  // Handle delete
+  const handleDelete = async () => {
+    if (!deletingRestaurant?.id) return;
+
+    setDeleting(true);
+    try {
+      await adminAPI.deleteRestaurant(deletingRestaurant.id);
+      setDeleteModal(false);
+      fetchRestaurants();
+    } catch (err) {
+      alert(err.response?.data?.message || 'Failed to delete restaurant');
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   return (
     <>
@@ -185,11 +249,19 @@ export default function Restaurants() {
                           </span>
                         </td>
 
-                        {/* Action */}
+                        {/* Actions */}
                         <td className="rs-td">
-                          <Link to={`/restaurants/${row.id}`} className="rs-view-btn">
-                            View →
-                          </Link>
+                          <div className="rs-actions">
+                            <Link to={`/restaurants/${row.id}`} className="rs-view-btn">
+                              View
+                            </Link>
+                            <button className="rs-action-btn rs-action-edit" onClick={() => openEditModal(row)}>
+                              <Edit2 size={14} />
+                            </button>
+                            <button className="rs-action-btn rs-action-delete" onClick={() => openDeleteModal(row)}>
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
                         </td>
 
                       </tr>
@@ -241,6 +313,92 @@ export default function Restaurants() {
           )}
 
         </div>
+
+        {/* Edit Modal */}
+        {editModal && (
+          <div className="rs-modal-overlay" onClick={() => setEditModal(false)}>
+            <div className="rs-modal" onClick={e => e.stopPropagation()}>
+              <div className="rs-modal-header">
+                <h2 className="rs-modal-title">Edit Restaurant Owner</h2>
+                <button className="rs-modal-close" onClick={() => setEditModal(false)}>
+                  <X size={20} />
+                </button>
+              </div>
+              <form onSubmit={handleEditSubmit} className="rs-modal-form">
+                {editError && (
+                  <div className="rs-form-error">
+                    <AlertCircle size={16} />
+                    {editError}
+                  </div>
+                )}
+                <div className="rs-form-group">
+                  <label className="rs-form-label">Owner Name</label>
+                  <input
+                    type="text"
+                    className="rs-form-input"
+                    value={editData.name}
+                    onChange={e => setEditData({ ...editData, name: e.target.value })}
+                    placeholder="Enter name"
+                  />
+                </div>
+                <div className="rs-form-group">
+                  <label className="rs-form-label">Email</label>
+                  <input
+                    type="email"
+                    className="rs-form-input"
+                    value={editData.email}
+                    onChange={e => setEditData({ ...editData, email: e.target.value })}
+                    placeholder="Enter email"
+                  />
+                </div>
+                <div className="rs-form-group">
+                  <label className="rs-form-label">Phone</label>
+                  <input
+                    type="text"
+                    className="rs-form-input"
+                    value={editData.phone}
+                    onChange={e => setEditData({ ...editData, phone: e.target.value })}
+                    placeholder="Enter phone"
+                  />
+                </div>
+                <div className="rs-form-actions">
+                  <button type="button" className="rs-btn-cancel" onClick={() => setEditModal(false)}>
+                    Cancel
+                  </button>
+                  <button type="submit" className="rs-btn-save" disabled={saving}>
+                    {saving && <span className="rs-btn-spinner" />}
+                    Save Changes
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Confirmation Modal */}
+        {deleteModal && (
+          <div className="rs-modal-overlay" onClick={() => setDeleteModal(false)}>
+            <div className="rs-confirm-modal" onClick={e => e.stopPropagation()}>
+              <div className="rs-confirm-icon">
+                <Trash2 size={24} color="#dc2626" />
+              </div>
+              <h3 className="rs-confirm-title">Delete Restaurant</h3>
+              <p className="rs-confirm-text">
+                Are you sure you want to delete <strong>{deletingRestaurant?.name}</strong>?
+                This will also delete the owner account and all associated data. This action cannot be undone.
+              </p>
+              <div className="rs-confirm-actions">
+                <button className="rs-btn-cancel" onClick={() => setDeleteModal(false)}>
+                  Cancel
+                </button>
+                <button className="rs-btn-delete" onClick={handleDelete} disabled={deleting}>
+                  {deleting && <span className="rs-btn-spinner" />}
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
@@ -535,4 +693,116 @@ const styles = `
   border-color: #f59e0b !important;
 }
 .rs-page-ellipsis { font-size: 13px; color: #bbb; padding: 0 4px; }
+
+/* actions */
+.rs-actions { display: flex; align-items: center; gap: 8px; }
+.rs-action-btn {
+  width: 32px; height: 32px;
+  border: none; border-radius: 8px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s, transform 0.15s;
+}
+.rs-action-edit { background: #f0f9ff; color: #0369a1; }
+.rs-action-edit:hover { background: #e0f2fe; transform: scale(1.05); }
+.rs-action-delete { background: #fef2f2; color: #dc2626; }
+.rs-action-delete:hover { background: #fee2e2; transform: scale(1.05); }
+
+/* modal */
+.rs-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.4);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 1000; padding: 20px;
+  backdrop-filter: blur(2px);
+}
+.rs-modal {
+  background: #fff; border-radius: 20px;
+  width: 100%; max-width: 440px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+}
+.rs-modal-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 20px 24px; border-bottom: 1px solid #f0ede6;
+}
+.rs-modal-title {
+  font-family: 'Fraunces', serif;
+  font-size: 18px; font-weight: 600; color: #1a2e1a; margin: 0;
+}
+.rs-modal-close {
+  width: 36px; height: 36px; border: none;
+  background: #f5f2ec; border-radius: 10px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  color: #888; transition: background 0.2s;
+}
+.rs-modal-close:hover { background: #ebe8e0; }
+.rs-modal-form { padding: 20px 24px; }
+.rs-form-error {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 16px; background: #fef2f2;
+  border: 1px solid #fecaca; border-radius: 10px;
+  color: #dc2626; font-size: 13px; margin-bottom: 16px;
+}
+.rs-form-group { margin-bottom: 16px; }
+.rs-form-label { display: block; font-size: 13px; font-weight: 500; color: #555; margin-bottom: 6px; }
+.rs-form-input {
+  width: 100%; padding: 10px 14px;
+  background: #fff; border: 1.5px solid #e8e4dc;
+  border-radius: 10px; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; transition: border-color 0.2s;
+}
+.rs-form-input:focus { outline: none; border-color: #f59e0b; }
+.rs-form-actions {
+  display: flex; justify-content: flex-end; gap: 12px;
+  margin-top: 20px; padding-top: 16px; border-top: 1px solid #f0ede6;
+}
+.rs-btn-cancel {
+  padding: 10px 20px; background: #f5f2ec; border: none;
+  border-radius: 10px; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 500; color: #666;
+  cursor: pointer; transition: background 0.2s;
+}
+.rs-btn-cancel:hover { background: #ebe8e0; }
+.rs-btn-save {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 24px; background: #f59e0b; border: none;
+  border-radius: 10px; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600; color: #fff;
+  cursor: pointer; transition: background 0.2s;
+}
+.rs-btn-save:hover:not(:disabled) { background: #d97706; }
+.rs-btn-save:disabled { opacity: 0.7; cursor: not-allowed; }
+.rs-btn-spinner {
+  width: 14px; height: 14px;
+  border: 2px solid rgba(255,255,255,0.3);
+  border-top-color: #fff; border-radius: 50%;
+  animation: rsspin 0.6s linear infinite;
+}
+
+/* confirm modal */
+.rs-confirm-modal {
+  background: #fff; border-radius: 20px;
+  padding: 28px; width: 100%; max-width: 360px;
+  text-align: center;
+}
+.rs-confirm-icon {
+  width: 56px; height: 56px; background: #fef2f2;
+  border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; margin: 0 auto 16px;
+}
+.rs-confirm-title {
+  font-family: 'Fraunces', serif;
+  font-size: 18px; font-weight: 600; color: #1a2e1a; margin: 0 0 8px;
+}
+.rs-confirm-text { font-size: 14px; color: #666; margin: 0 0 24px; line-height: 1.5; }
+.rs-confirm-actions { display: flex; gap: 12px; justify-content: center; }
+.rs-btn-delete {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 24px; background: #dc2626; border: none;
+  border-radius: 10px; font-family: 'DM Sans', sans-serif;
+  font-size: 14px; font-weight: 600; color: #fff;
+  cursor: pointer; transition: background 0.2s;
+}
+.rs-btn-delete:hover:not(:disabled) { background: #b91c1c; }
+.rs-btn-delete:disabled { opacity: 0.7; cursor: not-allowed; }
 `;

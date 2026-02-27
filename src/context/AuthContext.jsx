@@ -37,8 +37,36 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  // Check if user has a specific permission
+  const hasPermission = (permission) => {
+    if (!user) return false;
+    // If user has no permissions array or it's empty, they have all permissions (legacy admin)
+    if (!user.permissions || user.permissions.length === 0) return true;
+    return user.permissions.includes(permission);
+  };
+
+  // Get user's first permitted page for redirects
+  const getDefaultPage = () => {
+    if (!user || !user.permissions || user.permissions.length === 0) return '/';
+    const permToPath = {
+      dashboard: '/',
+      farmers: '/farmers',
+      restaurants: '/restaurants',
+      riders: '/riders',
+      customers: '/customers',
+      orders: '/orders',
+      payments: '/payments',
+      analytics: '/analytics',
+      users: '/users',
+    };
+    for (const perm of user.permissions) {
+      if (permToPath[perm]) return permToPath[perm];
+    }
+    return '/';
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, checkAuth }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, checkAuth, hasPermission, getDefaultPage }}>
       {children}
     </AuthContext.Provider>
   );

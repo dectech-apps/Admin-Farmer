@@ -5,7 +5,7 @@ import {
   TrendingUp, DollarSign, AlertCircle, UtensilsCrossed, Receipt,
 } from 'lucide-react';
 import {
-  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
   Tooltip, ResponsiveContainer, PieChart, Pie, Cell,
 } from 'recharts';
 
@@ -47,11 +47,11 @@ export default function Dashboard() {
       setStats(dashboardRes.data.data);
       const analyticsData = revenueRes.data.data;
       setRevenueData(
-        analyticsData?.dailyRevenue?.map(item => ({
+        analyticsData?.chart?.map(item => ({
           date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-          revenue: parseFloat(item.total) || 0,
-          commission: parseFloat(item.platform_commission) || 0,
-          orders: parseInt(item.order_count) || 0,
+          revenue: parseFloat(item.revenue) || 0,
+          commission: parseFloat(item.platformCommission) || 0,
+          orders: parseInt(item.orders) || 0,
         })) || []
       );
     } catch (err) {
@@ -246,6 +246,72 @@ export default function Dashboard() {
           </div>
 
         </div>
+
+        {/* Platform Commission Chart */}
+        <div className="dash-card">
+          <div className="dash-card-head">
+            <h3 className="dash-card-title">Platform Commission Trend</h3>
+            <span className="dash-badge" style={{ background: '#f0f9ff', color: '#0369a1' }}>Last 30 days</span>
+          </div>
+          <div className="dash-commission-wrap">
+            {revenueData.length > 0 ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={revenueData} margin={{ top: 10, right: 20, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="commissionLineGrad" x1="0" y1="0" x2="1" y2="0">
+                      <stop offset="0%" stopColor="#0ea5e9" />
+                      <stop offset="100%" stopColor="#0369a1" />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0ede6" vertical={false} />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#c4bfb5"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                  />
+                  <YAxis
+                    stroke="#c4bfb5"
+                    fontSize={11}
+                    tickLine={false}
+                    axisLine={false}
+                    tickFormatter={(value) => `$${value}`}
+                  />
+                  <Tooltip
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload?.length) return null;
+                      const commission = payload[0]?.value || 0;
+                      return (
+                        <div style={{
+                          background: '#0c4a6e', borderRadius: 12, padding: '12px 16px',
+                          color: '#fff', fontSize: 13, boxShadow: '0 8px 24px rgba(0,0,0,0.2)',
+                        }}>
+                          <p style={{ color: '#7dd3fc', marginBottom: 6, fontWeight: 500 }}>{label}</p>
+                          <p style={{ color: '#fff', fontSize: 18, fontWeight: 600, margin: 0 }}>
+                            ${commission.toLocaleString()}
+                          </p>
+                          <p style={{ color: '#bae6fd', fontSize: 11, marginTop: 4 }}>Platform Commission</p>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="commission"
+                    name="Commission"
+                    stroke="url(#commissionLineGrad)"
+                    strokeWidth={3}
+                    dot={{ fill: '#0369a1', strokeWidth: 0, r: 4 }}
+                    activeDot={{ fill: '#0ea5e9', strokeWidth: 3, stroke: '#fff', r: 6 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="dash-empty-chart">No commission data available</div>
+            )}
+          </div>
+        </div>
       </div>
     </>
   );
@@ -427,6 +493,17 @@ const dashStyles = `
 
 /* area chart */
 .dash-chart-wrap { height: 280px; }
+
+/* commission chart */
+.dash-commission-wrap { height: 240px; }
+.dash-empty-chart {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c4bfb5;
+  font-size: 14px;
+}
 
 /* pie */
 .dash-pie-wrap {

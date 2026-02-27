@@ -119,8 +119,9 @@ export default function Analytics() {
     },
   ];
 
-  /* max revenue for farm bars */
+  /* max revenue for farm/restaurant bars */
   const maxRevenue = Math.max(...topFarms.map(f => parseFloat(f.total_revenue || 0)), 1);
+  const maxRestaurantRevenue = Math.max(...topRestaurants.map(r => parseFloat(r.total_revenue || 0)), 1);
 
   if (loading) return (
     <>
@@ -160,7 +161,7 @@ export default function Analytics() {
         </div>
 
         {/* Summary cards */}
-        <div className="an-grid-4">
+        <div className="an-grid-6">
           {summaryCards.map((c, i) => {
             const Icon = c.icon;
             return (
@@ -308,6 +309,45 @@ export default function Analytics() {
           )}
         </div>
 
+        {/* Top restaurants */}
+        <div className="an-card">
+          <div className="an-card-head">
+            <h3 className="an-card-title">Top Performing Restaurants</h3>
+            <span className="an-badge" style={{ background: '#fffbeb', color: '#f59e0b' }}>{topRestaurants.length} restaurants</span>
+          </div>
+
+          {topRestaurants.length > 0 ? (
+            <div className="an-farms">
+              {topRestaurants.map((restaurant, i) => {
+                const rev = parseFloat(restaurant.total_revenue || 0);
+                const pct = Math.round((rev / maxRestaurantRevenue) * 100);
+                const medal = MEDALS[i] || '#e5e7eb';
+                return (
+                  <div className="an-farm-row" key={restaurant.id}>
+                    <div className="an-farm-rank" style={{ background: medal + '22', color: medal }}>
+                      {i + 1}
+                    </div>
+                    <div className="an-farm-info">
+                      <div className="an-farm-top">
+                        <p className="an-farm-name">{restaurant.name}</p>
+                        <div className="an-farm-meta">
+                          <span className="an-farm-orders">{restaurant.order_count} orders</span>
+                          <span className="an-farm-rev" style={{ color: '#f59e0b' }}>${rev.toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <div className="an-farm-bar-bg">
+                        <div className="an-farm-bar-fill" style={{ width: `${pct}%`, background: medal }} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="an-empty-chart an-empty-chart-lg">No restaurant data available for this period</div>
+          )}
+        </div>
+
       </div>
     </>
   );
@@ -391,6 +431,14 @@ const styles = `
   gap: 16px;
 }
 @media (min-width: 1024px) { .an-grid-4 { grid-template-columns: repeat(4, 1fr); } }
+
+.an-grid-6 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+@media (min-width: 768px) { .an-grid-6 { grid-template-columns: repeat(3, 1fr); } }
+@media (min-width: 1280px) { .an-grid-6 { grid-template-columns: repeat(6, 1fr); } }
 
 .an-grid-2 {
   display: grid;

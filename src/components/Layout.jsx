@@ -3,25 +3,29 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Users, Truck, ShoppingCart,
-  BarChart3, LogOut, Menu, X, Leaf, UtensilsCrossed, CreditCard,
+  BarChart3, LogOut, Menu, X, Leaf, UtensilsCrossed, CreditCard, Shield,
 } from 'lucide-react';
 
 const navItems = [
-  { path: '/',            label: 'Dashboard',   icon: LayoutDashboard },
-  { path: '/farmers',     label: 'Farmers',     icon: Leaf },
-  { path: '/restaurants', label: 'Restaurants', icon: UtensilsCrossed },
-  { path: '/riders',      label: 'Riders',      icon: Truck },
-  { path: '/customers',   label: 'Customers',   icon: Users },
-  { path: '/orders',      label: 'Orders',      icon: ShoppingCart },
-  { path: '/payments',    label: 'Payments',    icon: CreditCard },
-  { path: '/analytics',   label: 'Analytics',   icon: BarChart3 },
+  { path: '/',            label: 'Dashboard',   icon: LayoutDashboard, permission: 'dashboard' },
+  { path: '/farmers',     label: 'Farmers',     icon: Leaf,            permission: 'farmers' },
+  { path: '/restaurants', label: 'Restaurants', icon: UtensilsCrossed, permission: 'restaurants' },
+  { path: '/riders',      label: 'Riders',      icon: Truck,           permission: 'riders' },
+  { path: '/customers',   label: 'Customers',   icon: Users,           permission: 'customers' },
+  { path: '/orders',      label: 'Orders',      icon: ShoppingCart,    permission: 'orders' },
+  { path: '/payments',    label: 'Payments',    icon: CreditCard,      permission: 'payments' },
+  { path: '/analytics',   label: 'Analytics',   icon: BarChart3,       permission: 'analytics' },
+  { path: '/users',       label: 'Users',       icon: Shield,          permission: 'users' },
 ];
 
 export default function Layout({ children }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, hasPermission } = useAuth();
+
+  // Filter nav items based on user permissions
+  const filteredNavItems = navItems.filter(item => hasPermission(item.permission));
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
@@ -61,7 +65,7 @@ export default function Layout({ children }) {
           {/* Nav */}
           <nav className="ly-nav">
             <p className="ly-nav-label">Navigation</p>
-            {navItems.map(item => {
+            {filteredNavItems.map(item => {
               const Icon = item.icon;
               const active = location.pathname === item.path ||
                 (item.path !== '/' && location.pathname.startsWith(item.path));
@@ -114,7 +118,7 @@ export default function Layout({ children }) {
               {navItems.find(n =>
                 n.path === location.pathname ||
                 (n.path !== '/' && location.pathname.startsWith(n.path))
-              )?.label || 'Dashboard'}
+              )?.label || filteredNavItems[0]?.label || 'Dashboard'}
             </div>
 
             {/* User chip */}
