@@ -47,6 +47,13 @@ export const adminAPI = {
   getRevenueAnalytics: (period) => api.get('/admin/analytics/revenue', { params: { period } }),
   updateUserStatus: (userId, status) => api.patch(`/admin/users/${userId}/status`, { status }),
   updateFarmVerification: (farmId, isVerified) => api.patch(`/admin/farms/${farmId}/verify`, { isVerified }),
+  // Restaurants
+  getRestaurants: (params) => api.get('/admin/restaurants', { params }),
+  getRestaurantDetails: (restaurantId) => api.get(`/admin/restaurants/${restaurantId}`),
+  updateRestaurantVerification: (restaurantId, isVerified) => api.patch(`/admin/restaurants/${restaurantId}/verify`, { isVerified }),
+  // Payments
+  getPayments: (params) => api.get('/admin/payments', { params }),
+  getPaymentAnalytics: (period) => api.get('/admin/analytics/payments', { params: { period } }),
 };
 
 export default api;

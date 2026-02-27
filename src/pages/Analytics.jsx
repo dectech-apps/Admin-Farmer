@@ -1,35 +1,52 @@
 import { useState, useEffect } from 'react';
 import { adminAPI } from '../services/api';
+import { DollarSign, TrendingUp, Leaf, ShoppingCart, UtensilsCrossed } from 'lucide-react';
 import {
-  DollarSign,
-  TrendingUp,
-  Leaf,
-  ShoppingCart,
-} from 'lucide-react';
-import {
-  AreaChart,
-  Area,
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
+  AreaChart, Area, BarChart, Bar,
+  XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer,
-  Legend,
 } from 'recharts';
+
+/* ── shared custom tooltip ── */
+const ChartTip = ({ active, payload, label }) => {
+  if (!active || !payload?.length) return null;
+  return (
+    <div style={{
+      background: '#1a2e1a', borderRadius: 10, padding: '10px 14px',
+      color: '#fff', fontSize: 13, boxShadow: '0 8px 24px rgba(0,0,0,0.18)',
+    }}>
+      <p style={{ color: '#a3d977', marginBottom: 6, fontWeight: 500 }}>{label}</p>
+      {payload.map(p => (
+        <p key={p.dataKey} style={{ color: '#e5e7eb', marginBottom: 2 }}>
+          {p.name}:{' '}
+          <strong>{typeof p.value === 'number' && p.name !== 'Orders'
+            ? `$${p.value.toLocaleString()}` : p.value}</strong>
+        </p>
+      ))}
+    </div>
+  );
+};
+
+const PERIODS = [
+  { value: '7days',  label: '7D' },
+  { value: '30days', label: '30D' },
+  { value: '90days', label: '90D' },
+  { value: 'year',   label: '1Y' },
+];
+
+const MEDALS = ['#f59e0b', '#94a3b8', '#ea7c2b'];
 
 export default function Analytics() {
   const [period, setPeriod] = useState('30days');
   const [dailyData, setDailyData] = useState([]);
   const [topFarms, setTopFarms] = useState([]);
+  const [topRestaurants, setTopRestaurants] = useState([]);
   const [stats, setStats] = useState(null);
+  const [analyticsData, setAnalyticsData] = useState(null);
   const [commissionRates, setCommissionRates] = useState({ platform: 15, farmer: 85 });
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchAnalytics();
-  }, [period]);
+  useEffect(() => { fetchAnalytics(); }, [period]);
 
   const fetchAnalytics = async () => {
     try {
@@ -38,17 +55,20 @@ export default function Analytics() {
         adminAPI.getRevenueAnalytics(period),
         adminAPI.getDashboard(),
       ]);
-
-      const analyticsData = revenueRes.data.data;
-      setDailyData(analyticsData?.dailyRevenue?.map(item => ({
+      const data = revenueRes.data.data;
+      setAnalyticsData(data);
+      setDailyData(data?.chart?.map(item => ({
         date: new Date(item.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
-        revenue: parseFloat(item.total) || 0,
-        commission: parseFloat(item.platform_commission) || 0,
-        orders: parseInt(item.order_count) || 0,
+        revenue:           parseFloat(item.revenue) || 0,
+        farmRevenue:       parseFloat(item.farmRevenue) || 0,
+        restaurantRevenue: parseFloat(item.restaurantRevenue) || 0,
+        orders:            parseInt(item.orders) || 0,
+        farmOrders:        parseInt(item.farmOrders) || 0,
+        restaurantOrders:  parseInt(item.restaurantOrders) || 0,
       })) || []);
-      setTopFarms(analyticsData?.topFarms || []);
-      setCommissionRates(analyticsData?.commissionRates || { platform: 15, farmer: 85 });
-
+      setTopFarms(data?.topFarms || []);
+      setTopRestaurants(data?.topRestaurants || []);
+      setCommissionRates(dashboardRes.data.data?.commissionRates || { platform: 15, farmer: 85 });
       setStats(dashboardRes.data.data);
     } catch (err) {
       console.error('Failed to fetch analytics:', err);
@@ -62,263 +82,443 @@ export default function Analytics() {
       label: 'Total Revenue',
       value: `$${(stats?.revenue?.total || 0).toLocaleString()}`,
       icon: DollarSign,
-      color: 'text-emerald-700',
-      bgColor: 'bg-emerald-50',
+      accent: '#2d5a27', bg: '#f0faf0',
+    },
+    {
+      label: 'Farm Revenue',
+      value: `$${(stats?.revenue?.farmRevenue || 0).toLocaleString()}`,
+      sub: `${stats?.orders?.farmOrders || 0} orders`,
+      icon: Leaf,
+      accent: '#166534', bg: '#f0fdf4',
+    },
+    {
+      label: 'Restaurant Revenue',
+      value: `$${(stats?.revenue?.restaurantRevenue || 0).toLocaleString()}`,
+      sub: `${stats?.orders?.restaurantOrders || 0} orders`,
+      icon: UtensilsCrossed,
+      accent: '#f59e0b', bg: '#fffbeb',
     },
     {
       label: 'Platform Commission',
       value: `$${(stats?.revenue?.platformCommission || 0).toLocaleString()}`,
-      subLabel: `${commissionRates.platform}% of sales`,
+      sub: `${commissionRates.platform}% of sales`,
       icon: TrendingUp,
-      color: 'text-cyan-700',
-      bgColor: 'bg-cyan-50',
+      accent: '#0369a1', bg: '#f0f9ff',
     },
     {
       label: 'Farmer Earnings',
       value: `$${(stats?.revenue?.farmerEarnings || 0).toLocaleString()}`,
-      subLabel: `${commissionRates.farmer}% of sales`,
       icon: Leaf,
-      color: 'text-primary-700',
-      bgColor: 'bg-primary-50',
+      accent: '#15803d', bg: '#f0fdf4',
     },
     {
-      label: 'Total Orders',
-      value: stats?.orders?.total || 0,
-      subLabel: `${stats?.orders?.completed || 0} completed`,
-      icon: ShoppingCart,
-      color: 'text-amber-700',
-      bgColor: 'bg-amber-50',
+      label: 'Restaurant Earnings',
+      value: `$${(stats?.revenue?.restaurantEarnings || 0).toLocaleString()}`,
+      icon: UtensilsCrossed,
+      accent: '#ea580c', bg: '#fff7ed',
     },
   ];
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-500"></div>
+  /* max revenue for farm bars */
+  const maxRevenue = Math.max(...topFarms.map(f => parseFloat(f.total_revenue || 0)), 1);
+
+  if (loading) return (
+    <>
+      <style>{styles}</style>
+      <div className="an-state">
+        <div className="an-spinner" />
+        <p>Loading analytics…</p>
       </div>
-    );
-  }
+    </>
+  );
 
   return (
-    <div className="page-content space-y-8">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="page-title">Analytics</h1>
-          <p className="page-subtitle">Revenue and commission insights</p>
-        </div>
+    <>
+      <style>{styles}</style>
 
-        {/* Period selector */}
-        <div className="flex items-center gap-2 bg-white/70 rounded-xl border border-white/70 p-1 shadow-sm">
-          {[
-            { value: '7days', label: '7 Days' },
-            { value: '30days', label: '30 Days' },
-            { value: '90days', label: '90 Days' },
-            { value: 'year', label: 'Year' },
-          ].map((p) => (
-            <button
-              key={p.value}
-              onClick={() => setPeriod(p.value)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                period === p.value
-                  ? 'bg-primary-600 text-white shadow-md shadow-primary-600/25'
-                  : 'text-slate-600 hover:bg-slate-100/70'
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <div className="an-root">
 
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {summaryCards.map((card, index) => {
-          const Icon = card.icon;
-          return (
-            <div
-              key={card.label}
-              className="card p-6 animate-rise"
-              style={{ animationDelay: `${index * 90}ms` }}
-            >
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="text-slate-500 text-sm">{card.label}</p>
-                  <p className={`text-2xl font-semibold mt-1 ${card.color}`}>
-                    {card.value}
-                  </p>
-                  {card.subLabel && (
-                    <p className="text-xs text-slate-400 mt-1">{card.subLabel}</p>
-                  )}
-                </div>
-                <div className={`${card.bgColor} p-3 rounded-2xl ring-1 ring-slate-200/60`}>
-                  <Icon className={`w-5 h-5 ${card.color}`} />
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Commission Rate Info */}
-      <div className="bg-gradient-to-r from-primary-600 to-emerald-600 rounded-2xl p-6 text-white shadow-lg shadow-primary-600/20">
-        <div className="flex items-center gap-4">
-          <div className="bg-white/20 p-3 rounded-2xl">
-            <TrendingUp className="w-8 h-8" />
-          </div>
+        {/* Header */}
+        <div className="an-header">
           <div>
-            <h3 className="text-lg font-semibold">Platform Commission Rate</h3>
-            <p className="text-white/80">
+            <h1 className="an-title">Analytics</h1>
+            <p className="an-sub">Revenue and commission insights</p>
+          </div>
+
+          {/* Period tabs */}
+          <div className="an-period-wrap">
+            {PERIODS.map(p => (
+              <button
+                key={p.value}
+                className={`an-period-btn ${period === p.value ? 'an-period-active' : ''}`}
+                onClick={() => setPeriod(p.value)}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Summary cards */}
+        <div className="an-grid-4">
+          {summaryCards.map((c, i) => {
+            const Icon = c.icon;
+            return (
+              <div className="an-stat-card" key={c.label} style={{ animationDelay: `${i * 60}ms` }}>
+                <div className="an-stat-icon" style={{ background: c.bg }}>
+                  <Icon size={18} color={c.accent} />
+                </div>
+                <p className="an-stat-label">{c.label}</p>
+                <p className="an-stat-value" style={{ color: c.accent }}>{c.value}</p>
+                {c.sub && <p className="an-stat-sub">{c.sub}</p>}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Commission banner */}
+        <div className="an-banner">
+          <div className="an-banner-icon">
+            <TrendingUp size={22} color="#a3d977" />
+          </div>
+          <div className="an-banner-body">
+            <p className="an-banner-title">Platform Commission Rate</p>
+            <p className="an-banner-desc">
               Currently set to{' '}
-              <span className="text-2xl font-bold text-white">
-                {commissionRates.platform}%
-              </span>{' '}
-              of each order value
+              <strong className="an-banner-rate">{commissionRates.platform}%</strong>
+              {' '}of each order value — farmers keep{' '}
+              <strong className="an-banner-rate">{commissionRates.farmer}%</strong>
             </p>
           </div>
+          <div className="an-banner-pill">{commissionRates.platform}% / {commissionRates.farmer}%</div>
         </div>
-      </div>
 
-      {/* Charts */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Revenue Trend */}
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">
-            Revenue Trend
-          </h3>
-          <div className="h-80">
-            {dailyData.length > 0 ? (
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dailyData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
-                  <YAxis stroke="#9ca3af" fontSize={12} />
-                  <Tooltip />
-                  <Legend />
-                  <Area
-                    type="monotone"
-                    dataKey="revenue"
-                    name="Total Revenue"
-                    stroke="#0f766e"
-                    fill="#ccfbf1"
-                    strokeWidth={2}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-slate-500">
-                No revenue data for this period
-              </div>
-            )}
+        {/* Revenue charts */}
+        <div className="an-grid-2">
+          <div className="an-card">
+            <div className="an-card-head">
+              <h3 className="an-card-title">Farm Revenue</h3>
+              <span className="an-badge" style={{ background: '#f0fdf4', color: '#166534' }}>Farms</span>
+            </div>
+            <div className="an-chart-wrap">
+              {dailyData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={dailyData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="anFarmGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor="#2d5a27" stopOpacity={0.18} />
+                        <stop offset="95%" stopColor="#2d5a27" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0ede6" vertical={false} />
+                    <XAxis dataKey="date" stroke="#c4bfb5" fontSize={11} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#c4bfb5" fontSize={11} tickLine={false} axisLine={false} />
+                    <Tooltip content={<ChartTip />} />
+                    <Area type="monotone" dataKey="farmRevenue" name="Farm Revenue" stroke="#2d5a27" fill="url(#anFarmGrad)" strokeWidth={2.5} dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : <div className="an-empty-chart">No farm revenue data for this period</div>}
+            </div>
+          </div>
+
+          <div className="an-card">
+            <div className="an-card-head">
+              <h3 className="an-card-title">Restaurant Revenue</h3>
+              <span className="an-badge" style={{ background: '#fffbeb', color: '#f59e0b' }}>Restaurants</span>
+            </div>
+            <div className="an-chart-wrap">
+              {dailyData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={dailyData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="anRestGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor="#f59e0b" stopOpacity={0.18} />
+                        <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0ede6" vertical={false} />
+                    <XAxis dataKey="date" stroke="#c4bfb5" fontSize={11} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#c4bfb5" fontSize={11} tickLine={false} axisLine={false} />
+                    <Tooltip content={<ChartTip />} />
+                    <Area type="monotone" dataKey="restaurantRevenue" name="Restaurant Revenue" stroke="#f59e0b" fill="url(#anRestGrad)" strokeWidth={2.5} dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : <div className="an-empty-chart">No restaurant revenue data for this period</div>}
+            </div>
           </div>
         </div>
 
-        {/* Commission Breakdown */}
-        <div className="card p-6">
-          <h3 className="text-lg font-semibold text-slate-900 mb-4">
-            Commission Breakdown
-          </h3>
-          <div className="h-80">
+        {/* Order volume */}
+        <div className="an-card">
+          <div className="an-card-head">
+            <h3 className="an-card-title">Order Volume</h3>
+            <span className="an-badge">Daily orders</span>
+          </div>
+          <div className="an-chart-wrap an-chart-sm">
             {dailyData.length > 0 ? (
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={dailyData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
-                  <YAxis stroke="#9ca3af" fontSize={12} />
-                  <Tooltip />
-                  <Legend />
-                  <Bar
-                    dataKey="commission"
-                    name="Platform Commission"
-                    fill="#0891b2"
-                    radius={[4, 4, 0, 0]}
-                  />
+                <BarChart data={dailyData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f0ede6" vertical={false} />
+                  <XAxis dataKey="date" stroke="#c4bfb5" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#c4bfb5" fontSize={11} tickLine={false} axisLine={false} />
+                  <Tooltip content={<ChartTip />} />
+                  <Bar dataKey="orders" name="Orders" fill="#b45309" radius={[5, 5, 0, 0]} maxBarSize={28} />
                 </BarChart>
               </ResponsiveContainer>
-            ) : (
-              <div className="h-full flex items-center justify-center text-slate-500">
-                No commission data for this period
-              </div>
-            )}
+            ) : <div className="an-empty-chart">No order data for this period</div>}
           </div>
         </div>
-      </div>
 
-      {/* Top Farms */}
-      <div className="card p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">
-          Top Performing Farms
-        </h3>
-        {topFarms.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-slate-50/80">
-                <tr>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Rank</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Farm Name</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Orders</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Revenue</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-100">
-                {topFarms.map((farm, index) => (
-                  <tr key={farm.id} className="hover:bg-primary-50/40">
-                    <td className="px-4 py-3">
-                      <span className={`inline-flex items-center justify-center w-6 h-6 rounded-full text-sm font-medium ${
-                        index === 0 ? 'bg-amber-100 text-amber-700' :
-                        index === 1 ? 'bg-slate-200 text-slate-700' :
-                        index === 2 ? 'bg-orange-100 text-orange-700' :
-                        'bg-slate-100 text-slate-600'
-                      }`}>
-                        {index + 1}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 font-medium text-slate-800">{farm.name}</td>
-                    <td className="px-4 py-3 text-slate-600">{farm.order_count}</td>
-                    <td className="px-4 py-3">
-                      <span className="font-semibold text-emerald-700">
-                        ${parseFloat(farm.total_revenue || 0).toLocaleString()}
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+        {/* Top farms */}
+        <div className="an-card">
+          <div className="an-card-head">
+            <h3 className="an-card-title">Top Performing Farms</h3>
+            <span className="an-badge">{topFarms.length} farms</span>
           </div>
-        ) : (
-          <div className="text-center py-8 text-slate-500">
-            No farm data available for this period
-          </div>
-        )}
-      </div>
 
-      {/* Order Volume */}
-      <div className="card p-6">
-        <h3 className="text-lg font-semibold text-slate-900 mb-4">
-          Order Volume
-        </h3>
-        <div className="h-64">
-          {dailyData.length > 0 ? (
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={dailyData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
-                <YAxis stroke="#9ca3af" fontSize={12} />
-                <Tooltip />
-                <Bar
-                  dataKey="orders"
-                  name="Orders"
-                  fill="#f59e0b"
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          ) : (
-            <div className="h-full flex items-center justify-center text-slate-500">
-              No order data for this period
+          {topFarms.length > 0 ? (
+            <div className="an-farms">
+              {topFarms.map((farm, i) => {
+                const rev = parseFloat(farm.total_revenue || 0);
+                const pct = Math.round((rev / maxRevenue) * 100);
+                const medal = MEDALS[i] || '#e5e7eb';
+                return (
+                  <div className="an-farm-row" key={farm.id}>
+                    <div className="an-farm-rank" style={{ background: medal + '22', color: medal }}>
+                      {i + 1}
+                    </div>
+                    <div className="an-farm-info">
+                      <div className="an-farm-top">
+                        <p className="an-farm-name">{farm.name}</p>
+                        <div className="an-farm-meta">
+                          <span className="an-farm-orders">{farm.order_count} orders</span>
+                          <span className="an-farm-rev">${rev.toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <div className="an-farm-bar-bg">
+                        <div className="an-farm-bar-fill" style={{ width: `${pct}%`, background: medal }} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
+          ) : (
+            <div className="an-empty-chart an-empty-chart-lg">No farm data available for this period</div>
           )}
         </div>
+
       </div>
-    </div>
+    </>
   );
 }
+
+const styles = `
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,600&family=DM+Sans:wght@300;400;500&display=swap');
+
+.an-root {
+  font-family: 'DM Sans', sans-serif;
+  padding: 32px 28px;
+  max-width: 1280px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  min-height: 100vh;
+  background: #f5f2ec;
+}
+
+/* loading */
+.an-state {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 14px; height: 280px;
+  color: #bbb; font-family: 'DM Sans', sans-serif; font-size: 14px;
+}
+.an-spinner {
+  width: 40px; height: 40px;
+  border: 3px solid #e8e4dc;
+  border-top-color: #2d5a27;
+  border-radius: 50%;
+  animation: anspin 0.7s linear infinite;
+}
+@keyframes anspin { to { transform: rotate(360deg); } }
+
+/* header */
+.an-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+.an-title {
+  font-family: 'Fraunces', serif;
+  font-size: 26px; font-weight: 600;
+  color: #1a2e1a; margin: 0 0 3px;
+}
+.an-sub { font-size: 13.5px; color: #999; margin: 0; }
+
+/* period tabs */
+.an-period-wrap {
+  display: flex;
+  background: #fff;
+  border: 1.5px solid #e8e4dc;
+  border-radius: 12px;
+  padding: 4px;
+  gap: 2px;
+}
+.an-period-btn {
+  padding: 7px 16px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 13px; font-weight: 500;
+  color: #888;
+  background: transparent;
+  border: none;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.an-period-btn:hover { background: #f5f2ec; color: #444; }
+.an-period-active {
+  background: #1a2e1a !important;
+  color: #fff !important;
+}
+
+/* grids */
+.an-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+@media (min-width: 1024px) { .an-grid-4 { grid-template-columns: repeat(4, 1fr); } }
+
+.an-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+@media (min-width: 1024px) { .an-grid-2 { grid-template-columns: 1fr 1fr; } }
+
+/* stat card */
+.an-stat-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 22px 20px 18px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.05);
+  display: flex; flex-direction: column; gap: 8px;
+  animation: an-rise 0.4s cubic-bezier(0.22,1,0.36,1) both;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.an-stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 28px rgba(0,0,0,0.1); }
+@keyframes an-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.an-stat-icon {
+  width: 40px; height: 40px;
+  border-radius: 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+.an-stat-label { font-size: 12.5px; color: #999; margin: 0; }
+.an-stat-value {
+  font-family: 'Fraunces', serif;
+  font-size: 26px; font-weight: 600; line-height: 1; margin: 0;
+}
+.an-stat-sub { font-size: 11.5px; color: #bbb; margin: 0; }
+
+/* banner */
+.an-banner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  background: #1a2e1a;
+  border-radius: 18px;
+  padding: 20px 24px;
+  box-shadow: 0 6px 24px rgba(26,46,26,0.22);
+  flex-wrap: wrap;
+}
+.an-banner-icon {
+  width: 46px; height: 46px;
+  background: rgba(255,255,255,0.1);
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.an-banner-body { flex: 1; min-width: 180px; }
+.an-banner-title {
+  font-family: 'Fraunces', serif;
+  font-size: 16px; font-weight: 600;
+  color: #fff; margin: 0 0 4px;
+}
+.an-banner-desc { font-size: 13.5px; color: rgba(255,255,255,0.6); margin: 0; }
+.an-banner-rate { color: #a3d977; }
+.an-banner-pill {
+  font-size: 13px; font-weight: 600;
+  background: rgba(163,217,119,0.18);
+  color: #a3d977;
+  border: 1px solid rgba(163,217,119,0.25);
+  border-radius: 99px;
+  padding: 6px 16px;
+  white-space: nowrap;
+}
+
+/* shared card */
+.an-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 20px rgba(0,0,0,0.06);
+}
+.an-card-head {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+.an-card-title {
+  font-family: 'Fraunces', serif;
+  font-size: 17px; font-weight: 600;
+  color: #1a2e1a; margin: 0;
+}
+.an-badge {
+  font-size: 11.5px; color: #888;
+  background: #f5f2ec; border-radius: 99px;
+  padding: 4px 10px;
+}
+.an-chart-wrap { height: 280px; }
+.an-chart-sm   { height: 200px; }
+.an-empty-chart {
+  height: 100%; display: flex;
+  align-items: center; justify-content: center;
+  color: #c4bfb5; font-size: 14px;
+}
+.an-empty-chart-lg { height: 120px; }
+
+/* top farms */
+.an-farms { display: flex; flex-direction: column; gap: 16px; }
+.an-farm-row { display: flex; align-items: center; gap: 14px; }
+.an-farm-rank {
+  width: 32px; height: 32px; border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-family: 'Fraunces', serif;
+  font-size: 15px; font-weight: 600;
+  flex-shrink: 0;
+}
+.an-farm-info { flex: 1; display: flex; flex-direction: column; gap: 6px; }
+.an-farm-top {
+  display: flex; align-items: center;
+  justify-content: space-between; gap: 8px;
+}
+.an-farm-name { font-size: 14px; font-weight: 500; color: #1a1a1a; margin: 0; }
+.an-farm-meta { display: flex; align-items: center; gap: 10px; }
+.an-farm-orders { font-size: 12px; color: #bbb; }
+.an-farm-rev { font-size: 14px; font-weight: 600; color: #2d5a27; }
+.an-farm-bar-bg {
+  height: 5px; background: #f0ede6;
+  border-radius: 99px; overflow: hidden;
+}
+.an-farm-bar-fill {
+  height: 100%; border-radius: 99px;
+  transition: width 0.6s cubic-bezier(0.22,1,0.36,1);
+  opacity: 0.75;
+}
+`;

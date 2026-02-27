@@ -6,9 +6,12 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Farmers from './pages/Farmers';
 import FarmerDetails from './pages/FarmerDetails';
+import Restaurants from './pages/Restaurants';
+import RestaurantDetails from './pages/RestaurantDetails';
 import Riders from './pages/Riders';
 import Customers from './pages/Customers';
 import Orders from './pages/Orders';
+import Payments from './pages/Payments';
 import Analytics from './pages/Analytics';
 
 const queryClient = new QueryClient({
@@ -80,6 +83,22 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/restaurants"
+        element={
+          <PrivateRoute>
+            <Restaurants />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/restaurants/:restaurantId"
+        element={
+          <PrivateRoute>
+            <RestaurantDetails />
+          </PrivateRoute>
+        }
+      />
+      <Route
         path="/riders"
         element={
           <PrivateRoute>
@@ -100,6 +119,14 @@ function AppRoutes() {
         element={
           <PrivateRoute>
             <Orders />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/payments"
+        element={
+          <PrivateRoute>
+            <Payments />
           </PrivateRoute>
         }
       />
