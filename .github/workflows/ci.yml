@@ -40,5 +40,5 @@ jobs:
         run: npm run build
       
       - name: Deploy To Food Master Production Server
-        run: rsync -avz  build/* ${{ secrets.PRODUCTION_DEPLOY_USER }}@${{ secrets.PRODUCTION_DEPLOY_HOST }}:${{secrets.PRODUCTION_DEPLOY_PATH}}
+        run: rsync -avz  dist/* ${{ secrets.PRODUCTION_DEPLOY_USER }}@${{ secrets.PRODUCTION_DEPLOY_HOST }}:${{secrets.PRODUCTION_DEPLOY_PATH}}
       
