@@ -437,7 +437,7 @@ const styles = `
 .fm-root {
   font-family: 'DM Sans', sans-serif;
   padding: 32px 28px;
-  max-width: 1280px;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 24px;

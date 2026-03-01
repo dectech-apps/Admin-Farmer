@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { adminAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Truck, Star, CheckCircle, XCircle, Search, ChevronLeft, ChevronRight, Edit2, Trash2, X, AlertCircle, Eye } from 'lucide-react';
+import { Truck, Star, CheckCircle, XCircle, Search, ChevronLeft, ChevronRight, Edit2, Trash2, X, AlertCircle, Eye, ShieldCheck, Clock, ShieldX } from 'lucide-react';
 
 export default function Riders() {
   const navigate = useNavigate();
@@ -170,7 +170,7 @@ export default function Riders() {
               <table className="rd-table">
                 <thead>
                   <tr>
-                    {['Rider', 'Phone', 'Vehicle', 'Deliveries', 'Rating', 'Status', 'Joined', 'Actions'].map(h => (
+                    {['Rider', 'Phone', 'Vehicle', 'Deliveries', 'Rating', 'Verification', 'Status', 'Joined', 'Actions'].map(h => (
                       <th key={h} className="rd-th">{h}</th>
                     ))}
                   </tr>
@@ -218,6 +218,27 @@ export default function Riders() {
                       {/* Rating */}
                       <td className="rd-td">{renderStars(row.rating)}</td>
 
+                      {/* Verification Status */}
+                      <td className="rd-td">
+                        {row.is_verified || row.verification_status === 'verified' ? (
+                          <span className="rd-verify-badge rd-verify-verified">
+                            <ShieldCheck size={12} /> Verified
+                          </span>
+                        ) : row.verification_status === 'pending' || row.verification_status === 'under_review' ? (
+                          <span className="rd-verify-badge rd-verify-pending">
+                            <Clock size={12} /> Pending
+                          </span>
+                        ) : row.verification_status === 'rejected' ? (
+                          <span className="rd-verify-badge rd-verify-rejected">
+                            <ShieldX size={12} /> Rejected
+                          </span>
+                        ) : (
+                          <span className="rd-verify-badge rd-verify-none">
+                            <ShieldX size={12} /> Not Submitted
+                          </span>
+                        )}
+                      </td>
+
                       {/* Availability */}
                       <td className="rd-td">
                         <span className={`rd-status ${row.is_available ? 'rd-status-on' : 'rd-status-off'}`}>
@@ -243,9 +264,11 @@ export default function Riders() {
                           <button
                             className="rd-action-btn rd-action-view"
                             onClick={() => {
+                              // Use rider_id if available, otherwise fall back to id
+                              const riderId = row.rider_id || row.id;
                               console.log('Navigating to rider details with row:', row);
-                              console.log('Row ID:', row.id);
-                              navigate(`/riders/${row.id}`);
+                              console.log('Using rider ID:', riderId);
+                              navigate(`/riders/${riderId}`);
                             }}
                             title="View details"
                           >
@@ -440,7 +463,7 @@ const styles = `
 .rd-root {
   font-family: 'DM Sans', sans-serif;
   padding: 32px 28px;
-  max-width: 1280px;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -584,6 +607,21 @@ const styles = `
 }
 .rd-status-on  { background: #e8f5e0; color: #2d5a27; }
 .rd-status-off { background: #f5f2ec; color: #999; }
+
+/* verification badges */
+.rd-verify-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 10px;
+  border-radius: 99px;
+  font-size: 12px; font-weight: 500;
+  white-space: nowrap;
+}
+.rd-verify-verified { background: #dcfce7; color: #166534; }
+.rd-verify-pending { background: #fef3c7; color: #92400e; }
+.rd-verify-rejected { background: #fee2e2; color: #dc2626; }
+.rd-verify-none { background: #f5f5f5; color: #888; }
 
 /* state (loading/empty) */
 .rd-state {

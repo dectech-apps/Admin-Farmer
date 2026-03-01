@@ -8,6 +8,8 @@ import Farmers from './pages/Farmers';
 import FarmerDetails from './pages/FarmerDetails';
 import Restaurants from './pages/Restaurants';
 import RestaurantDetails from './pages/RestaurantDetails';
+import Boutiques from './pages/Boutiques';
+import BoutiqueDetails from './pages/BoutiqueDetails';
 import Riders from './pages/Riders';
 import RiderDetails from './pages/RiderDetails';
 import Customers from './pages/Customers';
@@ -51,7 +53,7 @@ function PrivateRoute({ children, permission }) {
 }
 
 function AppRoutes() {
-  const { user, loading } = useAuth();
+  const { user, loading, getDefaultPage } = useAuth();
 
   if (loading) {
     return (
@@ -60,8 +62,6 @@ function AppRoutes() {
       </div>
     );
   }
-
-  const { getDefaultPage } = useAuth();
 
   return (
     <Routes>
@@ -106,6 +106,22 @@ function AppRoutes() {
         element={
           <PrivateRoute permission="restaurants">
             <RestaurantDetails />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/boutiques"
+        element={
+          <PrivateRoute permission="boutiques">
+            <Boutiques />
+          </PrivateRoute>
+        }
+      />
+      <Route
+        path="/boutiques/:boutiqueId"
+        element={
+          <PrivateRoute permission="boutiques">
+            <BoutiqueDetails />
           </PrivateRoute>
         }
       />

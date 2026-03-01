@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { adminAPI } from '../services/api';
-import { DollarSign, TrendingUp, Leaf, ShoppingCart, UtensilsCrossed } from 'lucide-react';
+import { DollarSign, TrendingUp, Leaf, ShoppingCart, UtensilsCrossed, ShoppingBag } from 'lucide-react';
 import {
   AreaChart, Area, BarChart, Bar, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip,
@@ -41,6 +41,7 @@ export default function Analytics() {
   const [dailyData, setDailyData] = useState([]);
   const [topFarms, setTopFarms] = useState([]);
   const [topRestaurants, setTopRestaurants] = useState([]);
+  const [topBoutiques, setTopBoutiques] = useState([]);
   const [stats, setStats] = useState(null);
   const [analyticsData, setAnalyticsData] = useState(null);
   const [commissionRates, setCommissionRates] = useState({ platform: 15, farmer: 85 });
@@ -62,12 +63,15 @@ export default function Analytics() {
         revenue:           parseFloat(item.revenue) || 0,
         farmRevenue:       parseFloat(item.farmRevenue) || 0,
         restaurantRevenue: parseFloat(item.restaurantRevenue) || 0,
+        boutiqueRevenue:   parseFloat(item.boutiqueRevenue) || 0,
         orders:            parseInt(item.orders) || 0,
         farmOrders:        parseInt(item.farmOrders) || 0,
         restaurantOrders:  parseInt(item.restaurantOrders) || 0,
+        boutiqueOrders:    parseInt(item.boutiqueOrders) || 0,
       })) || []);
       setTopFarms(data?.topFarms || []);
       setTopRestaurants(data?.topRestaurants || []);
+      setTopBoutiques(data?.topBoutiques || []);
       setCommissionRates(dashboardRes.data.data?.commissionRates || { platform: 15, farmer: 85 });
       setStats(dashboardRes.data.data);
     } catch (err) {
@@ -99,6 +103,13 @@ export default function Analytics() {
       accent: '#f59e0b', bg: '#fffbeb',
     },
     {
+      label: 'Boutique Revenue',
+      value: `$${(stats?.revenue?.boutiqueRevenue || 0).toLocaleString()}`,
+      sub: `${stats?.orders?.boutiqueOrders || 0} orders`,
+      icon: ShoppingBag,
+      accent: '#8b5cf6', bg: '#f3e8ff',
+    },
+    {
       label: 'Platform Commission',
       value: `$${(stats?.revenue?.platformCommission || 0).toLocaleString()}`,
       sub: `${commissionRates.platform}% of sales`,
@@ -117,11 +128,18 @@ export default function Analytics() {
       icon: UtensilsCrossed,
       accent: '#ea580c', bg: '#fff7ed',
     },
+    {
+      label: 'Boutique Earnings',
+      value: `$${(stats?.revenue?.boutiqueEarnings || 0).toLocaleString()}`,
+      icon: ShoppingBag,
+      accent: '#7c3aed', bg: '#f3e8ff',
+    },
   ];
 
-  /* max revenue for farm/restaurant bars */
+  /* max revenue for farm/restaurant/boutique bars */
   const maxRevenue = Math.max(...topFarms.map(f => parseFloat(f.total_revenue || 0)), 1);
   const maxRestaurantRevenue = Math.max(...topRestaurants.map(r => parseFloat(r.total_revenue || 0)), 1);
+  const maxBoutiqueRevenue = Math.max(...topBoutiques.map(b => parseFloat(b.total_revenue || 0)), 1);
 
   if (loading) return (
     <>
@@ -205,12 +223,14 @@ export default function Analytics() {
               {(() => {
                 const farmComm = stats?.revenue?.farmCommission || 0;
                 const restComm = stats?.revenue?.restaurantCommission || 0;
+                const boutiqueComm = stats?.revenue?.boutiqueCommission || 0;
                 const riderComm = stats?.revenue?.riderCommission || 0;
-                const total = farmComm + restComm + riderComm;
+                const total = farmComm + restComm + boutiqueComm + riderComm;
 
                 const pieData = [
                   { name: 'Farm Commission', value: farmComm, color: '#2d5a27' },
                   { name: 'Restaurant Commission', value: restComm, color: '#f59e0b' },
+                  { name: 'Boutique Commission', value: boutiqueComm, color: '#8b5cf6' },
                   { name: 'Rider Commission', value: riderComm, color: '#0ea5e9' },
                 ].filter(d => d.value > 0);
 
@@ -274,6 +294,13 @@ export default function Analytics() {
                 </div>
               </div>
               <div className="an-pie-legend-item">
+                <div className="an-pie-dot" style={{ background: '#8b5cf6' }} />
+                <div>
+                  <p className="an-pie-legend-label">Boutique Commission</p>
+                  <p className="an-pie-legend-value">${(stats?.revenue?.boutiqueCommission || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                </div>
+              </div>
+              <div className="an-pie-legend-item">
                 <div className="an-pie-dot" style={{ background: '#0ea5e9' }} />
                 <div>
                   <p className="an-pie-legend-label">Rider Commission</p>
@@ -289,7 +316,7 @@ export default function Analytics() {
         </div>
 
         {/* Revenue charts */}
-        <div className="an-grid-2">
+        <div className="an-grid-3">
           <div className="an-card">
             <div className="an-card-head">
               <h3 className="an-card-title">Farm Revenue</h3>
@@ -339,6 +366,32 @@ export default function Analytics() {
                   </AreaChart>
                 </ResponsiveContainer>
               ) : <div className="an-empty-chart">No restaurant revenue data for this period</div>}
+            </div>
+          </div>
+
+          <div className="an-card">
+            <div className="an-card-head">
+              <h3 className="an-card-title">Boutique Revenue</h3>
+              <span className="an-badge" style={{ background: '#f3e8ff', color: '#8b5cf6' }}>Boutiques</span>
+            </div>
+            <div className="an-chart-wrap">
+              {dailyData.length > 0 ? (
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={dailyData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="anBoutiqueGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%"  stopColor="#8b5cf6" stopOpacity={0.18} />
+                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0ede6" vertical={false} />
+                    <XAxis dataKey="date" stroke="#c4bfb5" fontSize={11} tickLine={false} axisLine={false} />
+                    <YAxis stroke="#c4bfb5" fontSize={11} tickLine={false} axisLine={false} />
+                    <Tooltip content={<ChartTip />} />
+                    <Area type="monotone" dataKey="boutiqueRevenue" name="Boutique Revenue" stroke="#8b5cf6" fill="url(#anBoutiqueGrad)" strokeWidth={2.5} dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : <div className="an-empty-chart">No boutique revenue data for this period</div>}
             </div>
           </div>
         </div>
@@ -442,6 +495,45 @@ export default function Analytics() {
           )}
         </div>
 
+        {/* Top boutiques */}
+        <div className="an-card">
+          <div className="an-card-head">
+            <h3 className="an-card-title">Top Performing Boutiques</h3>
+            <span className="an-badge" style={{ background: '#f3e8ff', color: '#8b5cf6' }}>{topBoutiques.length} boutiques</span>
+          </div>
+
+          {topBoutiques.length > 0 ? (
+            <div className="an-farms">
+              {topBoutiques.map((boutique, i) => {
+                const rev = parseFloat(boutique.total_revenue || 0);
+                const pct = Math.round((rev / maxBoutiqueRevenue) * 100);
+                const medal = MEDALS[i] || '#e5e7eb';
+                return (
+                  <div className="an-farm-row" key={boutique.id}>
+                    <div className="an-farm-rank" style={{ background: medal + '22', color: medal }}>
+                      {i + 1}
+                    </div>
+                    <div className="an-farm-info">
+                      <div className="an-farm-top">
+                        <p className="an-farm-name">{boutique.name}</p>
+                        <div className="an-farm-meta">
+                          <span className="an-farm-orders">{boutique.order_count} orders</span>
+                          <span className="an-farm-rev" style={{ color: '#8b5cf6' }}>${rev.toLocaleString()}</span>
+                        </div>
+                      </div>
+                      <div className="an-farm-bar-bg">
+                        <div className="an-farm-bar-fill" style={{ width: `${pct}%`, background: medal }} />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="an-empty-chart an-empty-chart-lg">No boutique data available for this period</div>
+          )}
+        </div>
+
       </div>
     </>
   );
@@ -453,7 +545,7 @@ const styles = `
 .an-root {
   font-family: 'DM Sans', sans-serif;
   padding: 32px 28px;
-  max-width: 1280px;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -531,8 +623,8 @@ const styles = `
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
 }
-@media (min-width: 768px) { .an-grid-6 { grid-template-columns: repeat(3, 1fr); } }
-@media (min-width: 1280px) { .an-grid-6 { grid-template-columns: repeat(6, 1fr); } }
+@media (min-width: 768px) { .an-grid-6 { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 1280px) { .an-grid-6 { grid-template-columns: repeat(8, 1fr); } }
 
 .an-grid-2 {
   display: grid;
@@ -540,6 +632,14 @@ const styles = `
   gap: 20px;
 }
 @media (min-width: 1024px) { .an-grid-2 { grid-template-columns: 1fr 1fr; } }
+
+.an-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+}
+@media (min-width: 768px) { .an-grid-3 { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1280px) { .an-grid-3 { grid-template-columns: 1fr 1fr 1fr; } }
 
 /* stat card */
 .an-stat-card {

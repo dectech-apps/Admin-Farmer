@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { adminAPI } from '../services/api';
 import {
   Users, Leaf, Truck, ShoppingCart,
-  TrendingUp, DollarSign, AlertCircle, UtensilsCrossed, Receipt,
+  TrendingUp, DollarSign, AlertCircle, UtensilsCrossed, Receipt, ShoppingBag,
 } from 'lucide-react';
 import {
   AreaChart, Area, LineChart, Line, XAxis, YAxis, CartesianGrid,
@@ -83,6 +83,7 @@ export default function Dashboard() {
   const statCards = [
     { label: 'Total Farmers',     value: stats?.users?.farmers     || 0, icon: Leaf,             accent: '#2d5a27', bg: '#f0faf0' },
     { label: 'Total Restaurants', value: stats?.users?.restaurants || 0, icon: UtensilsCrossed,  accent: '#f59e0b', bg: '#fffbeb' },
+    { label: 'Total Boutiques',   value: stats?.users?.boutiques   || 0, icon: ShoppingBag,      accent: '#8b5cf6', bg: '#f3e8ff' },
     { label: 'Total Riders',      value: stats?.users?.riders      || 0, icon: Truck,            accent: '#0369a1', bg: '#f0f9ff' },
     { label: 'Total Customers',   value: stats?.users?.customers   || 0, icon: Users,            accent: '#7c3aed', bg: '#faf5ff' },
     { label: 'Total Orders',      value: stats?.orders?.total      || 0, icon: ShoppingCart,     accent: '#be185d', bg: '#fdf2f8' },
@@ -93,8 +94,10 @@ export default function Dashboard() {
     { label: 'Platform Commission',  value: stats?.revenue?.platformCommission || 0, icon: TrendingUp,      accent: '#0369a1' },
     { label: 'Farm Revenue',         value: stats?.revenue?.farmRevenue        || 0, icon: Leaf,            accent: '#166534' },
     { label: 'Restaurant Revenue',   value: stats?.revenue?.restaurantRevenue  || 0, icon: UtensilsCrossed, accent: '#f59e0b' },
+    { label: 'Boutique Revenue',     value: stats?.revenue?.boutiqueRevenue    || 0, icon: ShoppingBag,     accent: '#8b5cf6' },
     { label: 'Farmer Earnings',      value: stats?.revenue?.farmerEarnings     || 0, icon: Leaf,            accent: '#b45309' },
     { label: 'Restaurant Earnings',  value: stats?.revenue?.restaurantEarnings || 0, icon: UtensilsCrossed, accent: '#ea580c' },
+    { label: 'Boutique Earnings',    value: stats?.revenue?.boutiqueEarnings   || 0, icon: ShoppingBag,     accent: '#7c3aed' },
   ];
 
   const orderStatusData = [
@@ -324,7 +327,7 @@ const dashStyles = `
 .dash-root {
   font-family: 'DM Sans', sans-serif;
   padding: 32px 28px;
-  max-width: 1280px;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 28px;
@@ -384,7 +387,7 @@ const dashStyles = `
   .dash-grid-4 { grid-template-columns: repeat(3, 1fr); }
 }
 @media (min-width: 1024px) {
-  .dash-grid-4 { grid-template-columns: repeat(5, 1fr); }
+  .dash-grid-4 { grid-template-columns: repeat(6, 1fr); }
 }
 
 .dash-grid-3 {
@@ -392,8 +395,8 @@ const dashStyles = `
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
 }
-@media (min-width: 768px)  { .dash-grid-3 { grid-template-columns: repeat(3, 1fr); } }
-@media (min-width: 1024px) { .dash-grid-3 { grid-template-columns: repeat(6, 1fr); } }
+@media (min-width: 768px)  { .dash-grid-3 { grid-template-columns: repeat(4, 1fr); } }
+@media (min-width: 1024px) { .dash-grid-3 { grid-template-columns: repeat(8, 1fr); } }
 
 /* stat card */
 .dash-stat-card {

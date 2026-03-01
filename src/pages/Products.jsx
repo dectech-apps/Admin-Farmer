@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from 'react';
 import { adminAPI } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import {
-  Package, Leaf, UtensilsCrossed, TrendingUp, Search,
+  Package, Leaf, UtensilsCrossed, ShoppingBag, TrendingUp, Search,
   ChevronLeft, ChevronRight, Eye, Edit2, Trash2, X, AlertCircle,
   CheckCircle, XCircle, DollarSign,
 } from 'lucide-react';
@@ -113,17 +113,21 @@ export default function Products() {
     const allDates = new Set([
       ...(trends.farm || []).map(t => t.date),
       ...(trends.restaurant || []).map(t => t.date),
+      ...(trends.boutique || []).map(t => t.date),
     ]);
 
     const farmMap = {};
     const restMap = {};
+    const boutiqueMap = {};
     (trends.farm || []).forEach(t => { farmMap[t.date] = t.count; });
     (trends.restaurant || []).forEach(t => { restMap[t.date] = t.count; });
+    (trends.boutique || []).forEach(t => { boutiqueMap[t.date] = t.count; });
 
     return Array.from(allDates).sort().map(date => ({
       date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
       farm: farmMap[date] || 0,
       restaurant: restMap[date] || 0,
+      boutique: boutiqueMap[date] || 0,
     }));
   }, [trends]);
 
@@ -205,7 +209,7 @@ export default function Products() {
           </div>
           <div>
             <h1 className="pr-title">Products</h1>
-            <p className="pr-sub">Manage products from farms and restaurants</p>
+            <p className="pr-sub">Manage products from farms, restaurants, and boutiques</p>
           </div>
         </div>
 
@@ -274,6 +278,38 @@ export default function Products() {
               </div>
             )}
           </div>
+
+          {/* Boutique Stats */}
+          <div className="pr-stat-card pr-stat-boutique">
+            <div className="pr-stat-header">
+              <div className="pr-stat-icon" style={{ background: '#f3e8ff' }}>
+                <ShoppingBag size={18} color="#8b5cf6" />
+              </div>
+              <span className="pr-stat-label">Boutique Products</span>
+            </div>
+            {statsLoading ? (
+              <div className="pr-stat-loading">Loading...</div>
+            ) : (
+              <div className="pr-stat-body">
+                <div className="pr-stat-main">
+                  <span className="pr-stat-num">{stats?.boutique?.total || 0}</span>
+                  <span className="pr-stat-text">Total Products</span>
+                </div>
+                <div className="pr-stat-row">
+                  <span className="pr-stat-pill pr-pill-green">
+                    <CheckCircle size={12} /> {stats?.boutique?.available || 0} Available
+                  </span>
+                  <span className="pr-stat-pill pr-pill-grey">
+                    <XCircle size={12} /> {stats?.boutique?.unavailable || 0} Unavailable
+                  </span>
+                </div>
+                <div className="pr-stat-avg">
+                  <DollarSign size={14} />
+                  Avg Price: ${(stats?.boutique?.avgPrice || 0).toFixed(2)}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Charts Section */}
@@ -307,6 +343,10 @@ export default function Products() {
                       <stop offset="5%" stopColor="#d97706" stopOpacity={0.3} />
                       <stop offset="95%" stopColor="#d97706" stopOpacity={0} />
                     </linearGradient>
+                    <linearGradient id="boutiqueGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
+                    </linearGradient>
                   </defs>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f0ede6" />
                   <XAxis dataKey="date" tick={{ fontSize: 11, fill: '#999' }} tickLine={false} axisLine={{ stroke: '#e8e4dc' }} />
@@ -331,6 +371,15 @@ export default function Products() {
                     stroke="#d97706"
                     strokeWidth={2.5}
                     dot={{ fill: '#d97706', r: 4 }}
+                    activeDot={{ r: 6 }}
+                  />
+                  <Line
+                    type="monotone"
+                    dataKey="boutique"
+                    name="Boutique Products"
+                    stroke="#8b5cf6"
+                    strokeWidth={2.5}
+                    dot={{ fill: '#8b5cf6', r: 4 }}
                     activeDot={{ r: 6 }}
                   />
                 </LineChart>
@@ -365,6 +414,7 @@ export default function Products() {
                 <option value="">All Products</option>
                 <option value="farm">Farm Products</option>
                 <option value="restaurant">Restaurant Items</option>
+                <option value="boutique">Boutique Products</option>
               </select>
             </div>
             <span className="pr-count">{products.length} result{products.length !== 1 ? 's' : ''}</span>
@@ -404,7 +454,9 @@ export default function Products() {
                             />
                           ) : (
                             <div className="pr-product-placeholder">
-                              {row.type === 'farm' ? <Leaf size={16} color="#65a30d" /> : <UtensilsCrossed size={16} color="#d97706" />}
+                              {row.type === 'farm' ? <Leaf size={16} color="#65a30d" /> :
+                               row.type === 'boutique' ? <ShoppingBag size={16} color="#8b5cf6" /> :
+                               <UtensilsCrossed size={16} color="#d97706" />}
                             </div>
                           )}
                           <div>
@@ -414,9 +466,9 @@ export default function Products() {
                         </div>
                       </td>
                       <td className="pr-td">
-                        <span className={`pr-type-badge ${row.type === 'farm' ? 'pr-type-farm' : 'pr-type-restaurant'}`}>
-                          {row.type === 'farm' ? <Leaf size={12} /> : <UtensilsCrossed size={12} />}
-                          {row.type === 'farm' ? 'Farm' : 'Restaurant'}
+                        <span className={`pr-type-badge ${row.type === 'farm' ? 'pr-type-farm' : row.type === 'boutique' ? 'pr-type-boutique' : 'pr-type-restaurant'}`}>
+                          {row.type === 'farm' ? <Leaf size={12} /> : row.type === 'boutique' ? <ShoppingBag size={12} /> : <UtensilsCrossed size={12} />}
+                          {row.type === 'farm' ? 'Farm' : row.type === 'boutique' ? 'Boutique' : 'Restaurant'}
                         </span>
                       </td>
                       <td className="pr-td">
@@ -511,8 +563,8 @@ export default function Products() {
                     <div className="pr-view-grid">
                       <div className="pr-view-item">
                         <span className="pr-view-label">Type</span>
-                        <span className={`pr-type-badge ${viewProduct.type === 'farm' ? 'pr-type-farm' : 'pr-type-restaurant'}`}>
-                          {viewProduct.type === 'farm' ? 'Farm Product' : 'Restaurant Item'}
+                        <span className={`pr-type-badge ${viewProduct.type === 'farm' ? 'pr-type-farm' : viewProduct.type === 'boutique' ? 'pr-type-boutique' : 'pr-type-restaurant'}`}>
+                          {viewProduct.type === 'farm' ? 'Farm Product' : viewProduct.type === 'boutique' ? 'Boutique Product' : 'Restaurant Item'}
                         </span>
                       </div>
                       <div className="pr-view-item">
@@ -531,7 +583,7 @@ export default function Products() {
                       </div>
                       <div className="pr-view-item">
                         <span className="pr-view-label">Source</span>
-                        <span className="pr-view-value">{viewProduct.farm_name || viewProduct.restaurant_name || '—'}</span>
+                        <span className="pr-view-value">{viewProduct.farm_name || viewProduct.restaurant_name || viewProduct.boutique_name || '—'}</span>
                       </div>
                       <div className="pr-view-item">
                         <span className="pr-view-label">Owner</span>
@@ -666,7 +718,7 @@ const styles = `
 .pr-root {
   font-family: 'DM Sans', sans-serif;
   padding: 32px 28px;
-  max-width: 1280px;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -698,6 +750,7 @@ const styles = `
   gap: 20px;
 }
 @media (min-width: 768px) { .pr-stats-grid { grid-template-columns: 1fr 1fr; } }
+@media (min-width: 1024px) { .pr-stats-grid { grid-template-columns: 1fr 1fr 1fr; } }
 
 .pr-stat-card {
   background: #fff;
@@ -896,6 +949,7 @@ const styles = `
 }
 .pr-type-farm { background: #ecfccb; color: #65a30d; }
 .pr-type-restaurant { background: #fef3c7; color: #d97706; }
+.pr-type-boutique { background: #f3e8ff; color: #8b5cf6; }
 
 .pr-source { font-size: 13.5px; color: #555; }
 .pr-price { font-size: 15px; font-weight: 600; color: #1a1a1a; }

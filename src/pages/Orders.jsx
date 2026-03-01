@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { adminAPI } from '../services/api';
-import { Package, User, Truck, DollarSign, Clock, ChevronLeft, ChevronRight, ChevronDown } from 'lucide-react';
+import { Package, User, Truck, DollarSign, Clock, ChevronLeft, ChevronRight, ChevronDown, Leaf, UtensilsCrossed, ShoppingBag } from 'lucide-react';
 
 const STATUS_META = {
   pending:          { label: 'Pending',          bg: '#fef9ec', color: '#b45309',  dot: '#f59e0b' },
@@ -19,14 +19,16 @@ export default function Orders() {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [statusFilter, setStatusFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
 
-  useEffect(() => { fetchOrders(); }, [page, statusFilter]);
+  useEffect(() => { fetchOrders(); }, [page, statusFilter, typeFilter]);
 
   const fetchOrders = async () => {
     try {
       setLoading(true);
       const params = { page, limit: 10 };
       if (statusFilter) params.status = statusFilter;
+      if (typeFilter) params.type = typeFilter;
       const response = await adminAPI.getOrders(params);
       const result = response.data || {};
       setOrders(result.data || []);
@@ -54,26 +56,44 @@ export default function Orders() {
             </div>
             <div>
               <h1 className="or-title">Orders</h1>
-              <p className="or-sub">View and manage all customer orders</p>
+              <p className="or-sub">View and manage all farm, restaurant, and boutique orders</p>
             </div>
           </div>
 
-          {/* Status filter */}
-          <div className="or-filter-wrap">
-            {activeMeta && (
-              <span className="or-filter-dot" style={{ background: activeMeta.dot }} />
-            )}
-            <select
-              className="or-filter"
-              value={statusFilter}
-              onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
-            >
-              <option value="">All Statuses</option>
-              {Object.entries(STATUS_META).map(([val, m]) => (
-                <option key={val} value={val}>{m.label}</option>
-              ))}
-            </select>
-            <ChevronDown size={14} className="or-filter-chevron" />
+          {/* Filters */}
+          <div className="or-filters">
+            {/* Type filter */}
+            <div className="or-filter-wrap">
+              <select
+                className="or-filter"
+                value={typeFilter}
+                onChange={e => { setTypeFilter(e.target.value); setPage(1); }}
+              >
+                <option value="">All Types</option>
+                <option value="farm">Farm Orders</option>
+                <option value="restaurant">Restaurant Orders</option>
+                <option value="boutique">Boutique Orders</option>
+              </select>
+              <ChevronDown size={14} className="or-filter-chevron" />
+            </div>
+
+            {/* Status filter */}
+            <div className="or-filter-wrap">
+              {activeMeta && (
+                <span className="or-filter-dot" style={{ background: activeMeta.dot }} />
+              )}
+              <select
+                className="or-filter"
+                value={statusFilter}
+                onChange={e => { setStatusFilter(e.target.value); setPage(1); }}
+              >
+                <option value="">All Statuses</option>
+                {Object.entries(STATUS_META).map(([val, m]) => (
+                  <option key={val} value={val}>{m.label}</option>
+                ))}
+              </select>
+              <ChevronDown size={14} className="or-filter-chevron" />
+            </div>
           </div>
         </div>
 
@@ -94,7 +114,7 @@ export default function Orders() {
               <table className="or-table">
                 <thead>
                   <tr>
-                    {['Order ID', 'Customer', 'Farm', 'Total', 'Commission', 'Rider', 'Status', 'Date'].map(h => (
+                    {['Order ID', 'Customer', 'Type', 'Source', 'Total', 'Commission', 'Rider', 'Status', 'Date'].map(h => (
                       <th key={h} className="or-th">{h}</th>
                     ))}
                   </tr>
@@ -125,9 +145,26 @@ export default function Orders() {
                           </div>
                         </td>
 
-                        {/* Farm */}
+                        {/* Type */}
                         <td className="or-td">
-                          <span className="or-farm">{row.farm_name || '—'}</span>
+                          <span className={`or-type-badge ${
+                            row.order_type === 'farm' ? 'or-type-farm' :
+                            row.order_type === 'boutique' ? 'or-type-boutique' :
+                            row.order_type === 'restaurant' ? 'or-type-restaurant' : 'or-type-farm'
+                          }`}>
+                            {row.order_type === 'farm' ? <Leaf size={12} /> :
+                             row.order_type === 'boutique' ? <ShoppingBag size={12} /> :
+                             row.order_type === 'restaurant' ? <UtensilsCrossed size={12} /> :
+                             <Leaf size={12} />}
+                            {row.order_type === 'farm' ? 'Farm' :
+                             row.order_type === 'boutique' ? 'Boutique' :
+                             row.order_type === 'restaurant' ? 'Restaurant' : 'Farm'}
+                          </span>
+                        </td>
+
+                        {/* Source */}
+                        <td className="or-td">
+                          <span className="or-source">{row.farm_name || row.restaurant_name || row.boutique_name || '—'}</span>
                         </td>
 
                         {/* Total */}
@@ -239,7 +276,7 @@ const styles = `
 .or-root {
   font-family: 'DM Sans', sans-serif;
   padding: 32px 28px;
-  max-width: 1280px;
+  width: 100%;
   display: flex;
   flex-direction: column;
   gap: 24px;
@@ -364,8 +401,25 @@ const styles = `
 .or-person-sub  { font-size: 11.5px; color: #aaa; margin: 0; }
 .or-unassigned  { font-size: 13px; color: #c4bfb5; font-style: italic; }
 
-/* farm */
-.or-farm { font-size: 13.5px; color: #555; }
+/* filters row */
+.or-filters { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+/* source */
+.or-source { font-size: 13.5px; color: #555; }
+
+/* type badge */
+.or-type-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
+}
+.or-type-farm { background: #ecfccb; color: #65a30d; }
+.or-type-restaurant { background: #fef3c7; color: #d97706; }
+.or-type-boutique { background: #f3e8ff; color: #8b5cf6; }
 
 /* total */
 .or-total {

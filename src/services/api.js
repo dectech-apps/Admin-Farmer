@@ -70,6 +70,7 @@ export const adminAPI = {
   deleteRestaurant: (restaurantId) => api.delete(`/admin/restaurants/${restaurantId}`),
   updateRider: (riderId, data) => api.patch(`/admin/riders/${riderId}`, data),
   deleteRider: (riderId) => api.delete(`/admin/riders/${riderId}`),
+  updateRiderVerification: (riderId, action, rejectionReason) => api.patch(`/admin/riders/${riderId}/verify`, { action, rejectionReason }),
   updateCustomer: (customerId, data) => api.patch(`/admin/customers/${customerId}`, data),
   deleteCustomer: (customerId) => api.delete(`/admin/customers/${customerId}`),
   // Products
@@ -79,6 +80,12 @@ export const adminAPI = {
   getProductDetails: (productId, type) => api.get(`/admin/products/${productId}`, { params: { type } }),
   updateProduct: (productId, type, data) => api.patch(`/admin/products/${productId}`, data, { params: { type } }),
   deleteProduct: (productId, type) => api.delete(`/admin/products/${productId}`, { params: { type } }),
+  // Boutiques
+  getBoutiques: (params) => api.get('/admin/boutiques', { params }),
+  getBoutiqueDetails: (boutiqueId) => api.get(`/admin/boutiques/${boutiqueId}`),
+  updateBoutiqueVerification: (boutiqueId, isVerified) => api.patch(`/admin/boutiques/${boutiqueId}/verify`, { isVerified }),
+  updateBoutique: (boutiqueId, data) => api.patch(`/admin/boutiques/${boutiqueId}`, data),
+  deleteBoutique: (boutiqueId) => api.delete(`/admin/boutiques/${boutiqueId}`),
 };
 
 export default api;
