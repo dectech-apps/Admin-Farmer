@@ -467,7 +467,7 @@ export default function DeleteAccount() {
               <div className="da-brand-icon">
                 <Leaf size={20} color="#a3d977" />
               </div>
-              <span className="da-brand-name">DoorMaster</span>
+              <span className="da-brand-name">DoorStep</span>
             </div>
             <h1 className="da-title">
               <span className="da-title-icon">
@@ -476,7 +476,7 @@ export default function DeleteAccount() {
               Delete Account
             </h1>
             <p className="da-subtitle">
-              Request permanent deletion of your DoorMaster account and associated data
+              Request permanent deletion of your DoorStep account and associated data
             </p>
           </div>
         </header>
