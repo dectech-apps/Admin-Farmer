@@ -369,14 +369,14 @@ export default function Login() {
               <Leaf size={20} color="#a3d977" />
             </div>
             <div>
-              <p className="ff-panel-brand-name">FarmFresh</p>
+              <p className="ff-panel-brand-name">DoorMaster</p>
               <p className="ff-panel-brand-sub">Admin Control Center</p>
             </div>
           </div>
 
           <div className="ff-panel-copy">
             <h1 className="ff-panel-headline">
-              Keep every harvest, order, and delivery on <em>one clean canvas.</em>
+              Keep every fresh, order, and delivery on <em>one clean canvas.</em>
             </h1>
             <p className="ff-panel-desc">
               Monitor farmer onboarding, rider availability, and customer demand
@@ -403,7 +403,7 @@ export default function Login() {
               <div className="ff-logo-wrap">
                 <Leaf size={28} color="#a3d977" />
               </div>
-              <h1 className="ff-title">FarmFresh Admin</h1>
+              <h1 className="ff-title">DoorMaster Admin</h1>
               <p className="ff-subtitle">Sign in to your operations workspace</p>
             </div>
 
@@ -457,7 +457,7 @@ export default function Login() {
               </button>
             </form>
 
-            <p className="ff-footer">FarmFresh Admin Dashboard v1.0</p>
+            <p className="ff-footer">DoorMaster Admin Dashboard v1.0</p>
           </div>
         </div>
       </div>

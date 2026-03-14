@@ -18,6 +18,8 @@ import Payments from './pages/Payments';
 import Analytics from './pages/Analytics';
 import Users from './pages/Users';
 import Products from './pages/Products';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import DeleteAccount from './pages/DeleteAccount';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -69,6 +71,8 @@ function AppRoutes() {
         path="/login"
         element={user ? <Navigate to={getDefaultPage() || '/'} replace /> : <Login />}
       />
+      <Route path="/privacy" element={<PrivacyPolicy />} />
+      <Route path="/delete-account" element={<DeleteAccount />} />
       <Route
         path="/"
         element={
